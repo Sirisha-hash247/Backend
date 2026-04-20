@@ -1,7 +1,15 @@
+from urllib import request
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
+from .models import TestCase
+from .serializers import TestCaseSerializer
+from .services.testcase_service import create_testcase
+from .models import Bug
+from .serializers import BugSerializer
+from .services.bugs_service import create_bug
 
 from core.permissions import IsAdminUserRole
 
@@ -114,5 +122,61 @@ class ScreenViewSet(ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         screen = self.get_object()
         ScreenService.delete_screen(screen)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+# ---------------- TEST CASE ----------------
+class TestCaseViewSet(ModelViewSet):
+    serializer_class = TestCaseSerializer
+    permission_classes = [IsAuthenticated, IsAdminUserRole]
+
+    def get_queryset(self):
+        return TestCase.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        testcase = create_testcase(request.user, request.data)
+        return Response(TestCaseSerializer(testcase).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        testcase = self.get_object()
+
+        serializer = self.get_serializer(testcase, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        serializer.save(updated_by=request.user)
+
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        testcase = self.get_object()
+        testcase.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+# ---------------- BUG ----------------
+class BugViewSet(ModelViewSet):
+    serializer_class = BugSerializer
+    permission_classes = [IsAuthenticated, IsAdminUserRole]
+
+    def get_queryset(self):
+        return Bug.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        bug = create_bug(request.user, request.data)
+        return Response(BugSerializer(bug).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        bug = self.get_object()
+
+        serializer = self.get_serializer(bug, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        serializer.save(updated_by=request.user)
+
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        bug = self.get_object()
+        bug.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)

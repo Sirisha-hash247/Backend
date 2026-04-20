@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from apps.users.models import User
 from core.models import BaseModel
 
 
@@ -41,3 +42,101 @@ class Screen(BaseModel):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='screens')
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
+
+
+# ✅ TEST CASE
+class TestCase(BaseModel):
+
+    PRIORITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    )
+
+    STATUS_CHOICES = (
+        ('open', 'Open'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    )
+
+    TYPE_CHOICES = (
+    ('smoke', 'Smoke Testing'),
+    ('functional', 'Functional Testing'),
+    ('non_functional', 'Non-Functional Testing'),
+    ('regression', 'Regression Testing'),
+    ('integration', 'Integration Testing'),
+    ('system', 'System Testing'),
+    ('acceptance', 'Acceptance Testing'),
+    ('performance', 'Performance Testing'),
+    ('security', 'Security Testing'),
+    ('usability', 'Usability Testing'),
+)
+
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    screen = models.ForeignKey(Screen, on_delete=models.CASCADE, related_name='testcases')
+
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    expected_results = models.TextField()
+
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    type_of_testcase = models.CharField(max_length=30, choices=TYPE_CHOICES)
+
+    assigned_to = models.ForeignKey(
+        User,   # ✅ FIXED (use your custom user model)
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_testcases'
+    )
+
+    def __str__(self):
+        return self.title
+    
+# ✅ BUG / TICKET
+class Bug(BaseModel):
+
+    SEVERITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    )
+
+    STATUS_CHOICES = (
+        ('open', 'Open'),
+        ('closed', 'Closed'),
+    )
+
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='bugs')
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='bugs')
+    screen = models.ForeignKey(Screen, on_delete=models.CASCADE, related_name='bugs')
+
+    test_case = models.ForeignKey(
+        TestCase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bugs'
+    )
+
+    # optional (since you didn’t define model for it)
+    test_cycle_id = models.UUIDField(null=True, blank=True)
+
+    description = models.TextField()
+    steps_to_reproduce = models.TextField()
+
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)
+    expected_results = models.TextField()
+    actual_results = models.TextField()
+
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
+
+    screenshot_id = models.UUIDField(null=True, blank=True)
+
+    def __str__(self):
+        return self.description[:50]

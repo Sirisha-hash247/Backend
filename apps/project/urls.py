@@ -3,14 +3,19 @@
 # from .views import ProjectViewSet
 
 
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import ProjectViewSet, ModuleViewSet, ScreenViewSet   # ✅ IMPORTANT
+from .views import ProjectViewSet, ModuleViewSet, ScreenViewSet, TestCaseViewSet
+from .views import BugViewSet
 
 router = DefaultRouter()
 router.register('projects', ProjectViewSet, basename='project')
 router.register('modules', ModuleViewSet, basename='module')   # ✅ FIX
 router.register('screens', ScreenViewSet, basename='screen')
+router.register('testcases', TestCaseViewSet, basename='testcase')
+router.register('bugs', BugViewSet, basename='bug')
 
 urlpatterns = [
     path('', include(router.urls)),
