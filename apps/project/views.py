@@ -55,7 +55,7 @@ class ProjectViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         project = self.get_object()
-        delete_project(project)
+        delete_project(project, request.user)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
