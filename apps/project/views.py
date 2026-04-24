@@ -1,12 +1,21 @@
+from urllib import request
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
+from .models import TestCase, TestRun
+from .serializers import TestCaseSerializer
+from .services.testcase_service import create_testcase
+from .models import Bug
+from .serializers import BugSerializer
+from .services.bugs_service import create_bug
+from .services.testrun_service import create_test_run
 
 from core.permissions import IsAdminUserRole
 
 from .models import Project, Module, Screen
-from .serializers import ProjectSerializer, ModuleSerializer, ScreenSerializer
+from .serializers import ProjectSerializer, ModuleSerializer, ScreenSerializer, TestRunSerializer
 
 from .services.project_service import (
     create_project,
@@ -47,7 +56,7 @@ class ProjectViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         project = self.get_object()
-        delete_project(project)
+        delete_project(project, request.user)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -58,7 +67,12 @@ class ModuleViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminUserRole]
 
     def get_queryset(self):
-        return ModuleService.get_all_modules()
+        project_id = self.request.query_params.get("project")
+
+        if project_id:
+            return Module.objects.filter(project__id=project_id)
+
+        return Module.objects.all()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -91,7 +105,12 @@ class ScreenViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminUserRole]
 
     def get_queryset(self):
-        return ScreenService.get_all_screens()
+        module_id = self.request.query_params.get("module")
+
+        if module_id:
+            return Screen.objects.filter(module__uuid=module_id)
+
+        return Screen.objects.all()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -116,3 +135,97 @@ class ScreenViewSet(ModelViewSet):
         ScreenService.delete_screen(screen)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+# ---------------- TEST CASE ----------------
+class TestCaseViewSet(ModelViewSet):
+    serializer_class = TestCaseSerializer
+    permission_classes = [IsAuthenticated, IsAdminUserRole]
+
+    # 🔥 UPDATED QUERYSET (IMPORTANT)
+    def get_queryset(self):
+        screen_id = self.request.query_params.get("screen")
+
+        if screen_id:
+            return TestCase.objects.filter(screen__uuid=screen_id)
+
+        return TestCase.objects.all()
+
+    # ➕ CREATE
+    def create(self, request, *args, **kwargs):
+        testcase = create_testcase(request.user, request.data)
+        return Response(
+            TestCaseSerializer(testcase).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    # ✏️ UPDATE
+    def update(self, request, *args, **kwargs):
+        testcase = self.get_object()
+
+        serializer = self.get_serializer(
+            testcase,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+
+        serializer.save(updated_by=request.user)
+
+        return Response(serializer.data)
+
+    # ❌ DELETE
+    def destroy(self, request, *args, **kwargs):
+        testcase = self.get_object()
+        testcase.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT) 
+# ---------------- BUG ----------------
+class BugViewSet(ModelViewSet):
+    serializer_class = BugSerializer
+    permission_classes = [IsAuthenticated, IsAdminUserRole]
+
+    def get_queryset(self):
+        screen_id = self.request.query_params.get("screen")
+
+        if screen_id:
+            return Bug.objects.filter(screen__uuid=screen_id)
+
+        return Bug.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        bug = create_bug(request.user, request.data)
+        return Response(BugSerializer(bug).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        bug = self.get_object()
+
+        serializer = self.get_serializer(bug, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        serializer.save(updated_by=request.user)
+
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        bug = self.get_object()
+        bug.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class TestRunViewSet(ModelViewSet):
+    serializer_class = TestRunSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        screen_id = self.request.query_params.get("screen")
+
+        if screen_id:
+            return TestRun.objects.filter(
+                test_case__screen__uuid=screen_id
+            )
+
+        return TestRun.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        run = create_test_run(request.user, request.data)
+        return Response(TestRunSerializer(run).data, status=201)

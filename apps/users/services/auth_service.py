@@ -4,7 +4,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 
 def login_user(email, password):
-    user = authenticate(email=email, password=password)
+    # 🔥 FIX HERE
+    user = authenticate(username=email, password=password)
 
     if not user:
         raise AuthenticationFailed("Invalid credentials")
