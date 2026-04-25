@@ -12,7 +12,7 @@ from .serializers import BugSerializer
 from .services.bugs_service import create_bug
 from .services.testrun_service import create_test_run
 
-from core.permissions import IsAdminUserRole
+from core.permissions import IsAdminUserRole, IsAdminOrSuperAdmin
 
 from .models import Project, Module, Screen
 from .serializers import ProjectSerializer, ModuleSerializer, ScreenSerializer, TestRunSerializer
@@ -27,15 +27,14 @@ from .services.project_service import (
 from .services.module_service import ModuleService
 from .services.screen_service import ScreenService
 
-
-# ---------------- PROJECT ----------------
 class ProjectViewSet(ModelViewSet):
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated, IsAdminUserRole]
+    permission_classes = [IsAuthenticated, IsAdminOrSuperAdmin]
 
     def get_queryset(self):
-        return get_all_projects()
+        return get_all_projects(self.request.user)
 
+    # CREATE PROJECT (AUTO ORG)
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -50,16 +49,23 @@ class ProjectViewSet(ModelViewSet):
         serializer = self.get_serializer(project, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        project = update_project(project, request.user, serializer.validated_data)
+        try:
+            project = update_project(project, request.user, serializer.validated_data)
+        except PermissionError as e:
+            return Response({"error": str(e)}, status=403)
 
         return Response(ProjectSerializer(project).data)
 
+    #  DELETE WITH SECURITY
     def destroy(self, request, *args, **kwargs):
         project = self.get_object()
-        delete_project(project, request.user)
+
+        try:
+            delete_project(project, request.user)
+        except PermissionError as e:
+            return Response({"error": str(e)}, status=403)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 # ---------------- MODULE ----------------
 class ModuleViewSet(ModelViewSet):
