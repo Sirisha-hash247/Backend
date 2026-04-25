@@ -4,6 +4,8 @@ from apps.users.models import User
 from core.models import BaseModel
 
 
+from apps.users.models import Organization 
+
 class Project(BaseModel):
 
     STATUS_CHOICES = (
@@ -13,6 +15,12 @@ class Project(BaseModel):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="projects"
+    )
 
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -26,16 +34,12 @@ class Project(BaseModel):
     def __str__(self):
         return self.title
 
-
-# ✅ MODULE
 class Module(BaseModel):
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey('project.Project', on_delete=models.CASCADE, related_name='modules')
     name = models.CharField(max_length=255)
 
-
-# ✅ SCREEN
 class Screen(BaseModel):
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -44,7 +48,6 @@ class Screen(BaseModel):
     description = models.TextField(null=True, blank=True)
 
 
-# ✅ TEST CASE
 class TestCase(BaseModel):
 
     PRIORITY_CHOICES = (
@@ -85,7 +88,7 @@ class TestCase(BaseModel):
     type_of_testcase = models.CharField(max_length=30, choices=TYPE_CHOICES)
 
     assigned_to = models.ForeignKey(
-        User,   # ✅ FIXED (use your custom user model)
+        User,   
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -95,8 +98,6 @@ class TestCase(BaseModel):
     def __str__(self):
         return self.title
     
-
-# apps/project/models.py
 
 class TestRun(BaseModel):
 
@@ -125,7 +126,6 @@ class TestRun(BaseModel):
 
     executed_at = models.DateTimeField(auto_now_add=True)
     
-# ✅ BUG / TICKET
 class Bug(BaseModel):
 
     SEVERITY_CHOICES = (

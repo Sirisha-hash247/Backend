@@ -32,9 +32,15 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = '__all__'
+
         read_only_fields = [
-            'created_by', 'updated_by', 'deleted_by',
-            'created_at', 'updated_at', 'deleted_at'
+            'organization',  
+            'created_by',
+            'updated_by',
+            'deleted_by',
+            'created_at',
+            'updated_at',
+            'deleted_at'
         ]
 
 class TestCaseSerializer(serializers.ModelSerializer):
