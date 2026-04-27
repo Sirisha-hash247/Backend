@@ -58,6 +58,22 @@ class LoginView(APIView):
             "user": UserSerializer(data["user"]).data,
             "tokens": data["tokens"]
         })
+        
+        
+# Paste this AFTER the LoginView class in apps/users/views.py
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            "id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+            "organization_id": str(user.organization.id) if user.organization else None,
+        })
 
 
 # ---------------- USERS ---------------- #
