@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
 from drf_spectacular.utils import extend_schema
+from .serializers import MeSerializer
 
 from core.permissions import IsAdminUserRole, IsSuperAdmin, IsAdminOrSuperAdmin
 from core.roles import Roles
@@ -173,4 +174,12 @@ class OrganizationUsersView(APIView):
     def get(self, request, org_id):
         users = User.objects.filter(organization_id=org_id)
         return Response(UserSerializer(users, many=True).data)
+    
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = MeSerializer(request.user)
+        return Response(serializer.data)
     

@@ -57,3 +57,11 @@ class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
         fields = ["id", "name", "domain", "admin_user"]
+
+
+class MeSerializer(serializers.ModelSerializer):
+    organization = serializers.CharField(source="organization.name", read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "role", "organization"]
