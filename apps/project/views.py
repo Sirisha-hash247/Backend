@@ -1,4 +1,7 @@
 # apps/project/views.py
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import TestCase
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -216,6 +219,33 @@ class TestCaseViewSet(ModelViewSet):
         testcase = self.get_object()
         testcase.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    
+@api_view(['POST'])
+def bulk_import_testcases(request):
+    data = request.data
+    created = 0
+    errors = []
+
+    for i, row in enumerate(data):
+        try:
+            TestCase.objects.create(
+                title=row.get("title"),
+                description=row.get("description"),
+                expected_results=row.get("expected_results"),
+                priority=row.get("priority", "medium"),
+                status=row.get("status", "open"),
+                screen_id=row.get("screen"),
+            )
+            created += 1
+
+        except Exception as e:
+            errors.append(f"Row {i+1}: {str(e)}")
+
+    return Response({
+        "created": created,
+        "errors": errors
+    })
 
 
 # ─────────────────────────────────────────────
@@ -327,3 +357,53 @@ class BugViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(updated_by=request.user)
         return Response(serializer.data)
+    
+    
+    
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import serializers
+from drf_spectacular.utils import extend_schema
+
+from .models import TestCase
+
+
+# ✅ CREATE SERIALIZER FOR SWAGGER
+class BulkTestCaseSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    description = serializers.CharField()
+    expected_results = serializers.CharField()
+    priority = serializers.CharField()
+    status = serializers.CharField()
+    screen = serializers.CharField()
+
+
+@extend_schema(
+    request=BulkTestCaseSerializer(many=True),  # 🔥 THIS FIXES SWAGGER
+    responses={200: None},
+)
+@api_view(['POST'])
+def bulk_import_testcases(request):
+    data = request.data
+    created = 0
+    errors = []
+
+    for i, row in enumerate(data):
+        try:
+            TestCase.objects.create(
+                title=row.get("title"),
+                description=row.get("description"),
+                expected_results=row.get("expected_results"),
+                priority=row.get("priority", "medium"),
+                status=row.get("status", "open"),
+                screen_id=row.get("screen"),
+            )
+            created += 1
+
+        except Exception as e:
+            errors.append(f"Row {i+1}: {str(e)}")
+
+    return Response({
+        "created": created,
+        "errors": errors
+    })

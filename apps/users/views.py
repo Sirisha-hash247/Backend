@@ -14,7 +14,8 @@ from apps.users.serializers import (
     UserSerializer,
     RegisterSerializer,
     LoginSerializer,
-    OrganizationSerializer
+    OrganizationSerializer,
+    MeSerializer
 )
 
 from apps.users.services.auth_service import login_user
@@ -66,15 +67,8 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        return Response({
-            "id": str(user.id),
-            "username": user.username,
-            "email": user.email,
-            "role": user.role,
-            "organization_id": str(user.organization.id) if user.organization else None,
-        })
-
+        serializer = MeSerializer(request.user)
+        return Response(serializer.data)
 
 # ---------------- USERS ---------------- #
 

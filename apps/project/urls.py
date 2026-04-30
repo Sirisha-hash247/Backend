@@ -1,4 +1,6 @@
 from django.urls import path, include
+
+from .views import bulk_import_testcases
 from rest_framework.routers import DefaultRouter
 from .views import (
     ProjectViewSet,
@@ -17,6 +19,9 @@ router.register('testcases', TestCaseViewSet, basename='testcase')
 router.register('bugs', BugViewSet, basename='bug')
 router.register('testruns', TestRunViewSet, basename='testrun')
 
+
+
 urlpatterns = [
-    path('', include(router.urls)),
+    path('testcases/bulk-import/', bulk_import_testcases),  # ✅ FIRST
+    path("", include(router.urls)),
 ]
