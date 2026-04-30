@@ -8,8 +8,8 @@ urlpatterns = [
     path('register/', RegisterView.as_view()),
     path('login/', LoginView.as_view()),
 
-    # ✅ NEW — /api/users/me/
-    path('me/', MeView.as_view()),
+    
+    path("me/", MeView.as_view(), name="me"),
 
     path('manage/', UserListView.as_view()),
     path('manage/<uuid:user_id>/', UserListView.as_view()),
