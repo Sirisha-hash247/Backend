@@ -40,6 +40,8 @@ def create_testcase(user, data):
             except User.DoesNotExist:
                 raise ValidationError("Invalid assigned_to user")
 
+
+        steps = data.get("steps", {})
         # ---------------- CREATE TESTCASE ----------------
         testcase = TestCase.objects.create(
             screen=screen,
@@ -50,6 +52,8 @@ def create_testcase(user, data):
             status=data["status"],
             type_of_testcase=data["type_of_testcase"],
             assigned_to=assigned_user,
+            
+            steps=steps,
 
             # BaseModel fields
             created_by=user,

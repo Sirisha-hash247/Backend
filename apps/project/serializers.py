@@ -44,6 +44,9 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
 
 class TestCaseSerializer(serializers.ModelSerializer):
+
+    steps = serializers.JSONField(required=False)
+
     class Meta:
         model = TestCase
         fields = '__all__'
@@ -51,6 +54,27 @@ class TestCaseSerializer(serializers.ModelSerializer):
             'created_by', 'updated_by', 'deleted_by',
             'created_at', 'updated_at', 'deleted_at'
         ]
+
+    def validate_steps(self, value):
+        """
+        Convert list → {step 1: ..., step 2: ...}
+        """
+        if isinstance(value, list):
+            return {
+                f"step {i+1}": step
+                for i, step in enumerate(value)
+                if step.strip() != ""
+            }
+        return value
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        # Ensure steps always returned in required format
+        if isinstance(instance.steps, dict):
+            data["steps"] = instance.steps
+
+        return data
 
 class BugSerializer(serializers.ModelSerializer):
     class Meta:
@@ -85,3 +109,14 @@ class TestRunSerializer(serializers.ModelSerializer):
             "executed_at",
         ]
         read_only_fields = ["uuid", "executed_by", "executed_at"]
+        
+        
+# ✅ CREATE SERIALIZER FOR SWAGGER
+class BulkTestCaseSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    description = serializers.CharField()
+    expected_results = serializers.CharField()
+    priority = serializers.CharField()
+    status = serializers.CharField()
+    screen = serializers.CharField()
+

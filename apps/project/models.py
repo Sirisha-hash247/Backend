@@ -63,17 +63,17 @@ class TestCase(BaseModel):
     )
 
     TYPE_CHOICES = (
-    ('smoke', 'Smoke Testing'),
-    ('functional', 'Functional Testing'),
-    ('non_functional', 'Non-Functional Testing'),
-    ('regression', 'Regression Testing'),
-    ('integration', 'Integration Testing'),
-    ('system', 'System Testing'),
-    ('acceptance', 'Acceptance Testing'),
-    ('performance', 'Performance Testing'),
-    ('security', 'Security Testing'),
-    ('usability', 'Usability Testing'),
-)
+        ('smoke', 'Smoke Testing'),
+        ('functional', 'Functional Testing'),
+        ('non_functional', 'Non-Functional Testing'),
+        ('regression', 'Regression Testing'),
+        ('integration', 'Integration Testing'),
+        ('system', 'System Testing'),
+        ('acceptance', 'Acceptance Testing'),
+        ('performance', 'Performance Testing'),
+        ('security', 'Security Testing'),
+        ('usability', 'Usability Testing'),
+    )
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -87,18 +87,16 @@ class TestCase(BaseModel):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     type_of_testcase = models.CharField(max_length=30, choices=TYPE_CHOICES)
 
+    # 🔥 ADD THIS
+    steps = models.JSONField(null=True, blank=True)
+
     assigned_to = models.ForeignKey(
-        User,   
+        User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='assigned_testcases'
     )
-
-    def __str__(self):
-        return self.title
-    
-
 class TestRun(BaseModel):
 
     STATUS_CHOICES = (
@@ -160,7 +158,7 @@ class Bug(BaseModel):
     description = models.TextField()
     steps_to_reproduce = models.TextField()
 
-    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES) 
     expected_results = models.TextField()
     actual_results = models.TextField()
 

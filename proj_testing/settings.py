@@ -43,9 +43,21 @@ INSTALLED_APPS = [
     'apps.project',
     'apps.users',
     'corsheaders',
+    'django_q',
 
     
 ]
+
+Q_CLUSTER = {
+    'name': 'testcluster',
+    'workers': 4,
+    'timeout': 60,
+    'retry': 120,
+    'queue_limit': 50,
+    'bulk': 10,
+    'orm': 'default',  # uses your DB
+}
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', 
