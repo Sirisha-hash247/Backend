@@ -25,5 +25,5 @@ class ScreenService:
         return screen
 
     @staticmethod
-    def delete_screen(screen):
+    def delete_screen(screen,):
         screen.delete()

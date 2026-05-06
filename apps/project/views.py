@@ -128,7 +128,7 @@ class ModuleViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         module = self.get_object()
-        ModuleService.delete_module(module, request.user)   # ✅ FIXED
+        ModuleService.delete_module(module)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -174,7 +174,7 @@ class ScreenViewSet(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         screen = self.get_object()
-        ScreenService.delete_screen(screen, request.user)   # ✅ FIXED
+        ScreenService.delete_screen(screen)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
