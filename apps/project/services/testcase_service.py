@@ -17,7 +17,6 @@ def create_testcase(user, data):
             "description",
             "expected_results",
             "priority",
-            "status",
             "type_of_testcase",
             "screen",
         ]
@@ -49,7 +48,7 @@ def create_testcase(user, data):
             description=data["description"],
             expected_results=data["expected_results"],
             priority=data["priority"],
-            status=data["status"],
+            
             type_of_testcase=data["type_of_testcase"],
             assigned_to=assigned_user,
             
