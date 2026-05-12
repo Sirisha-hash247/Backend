@@ -14,7 +14,7 @@ def create_bug(user, data):
             "steps_to_reproduce",
             "severity",
             "expected_results",
-            "actual_results",
+            "actual_result",
         ]
 
         for field in required_fields:
@@ -37,19 +37,19 @@ def create_bug(user, data):
         except Screen.DoesNotExist:
             raise ValidationError("Invalid screen")
 
-        test_case = None
-        if data.get("test_case"):
+        testcase = None
+        if data.get("testcase"):
             try:
-                test_case = TestCase.objects.get(uuid=data["test_case"])
+                testcase = TestCase.objects.get(uuid=data["testcase"])
             except TestCase.DoesNotExist:
-                raise ValidationError("Invalid test_case")
+                raise ValidationError("Invalid testcase")
 
         # -------- CREATE BUG --------
         bug = Bug.objects.create(
             project=project,
             module=module,
             screen=screen,
-            test_case=test_case,
+            testcase=testcase,
 
             test_cycle_id=data.get("test_cycle_id"),
 
@@ -58,7 +58,7 @@ def create_bug(user, data):
 
             severity=data["severity"],
             expected_results=data["expected_results"],
-            actual_results=data["actual_results"],
+            actual_result=data["actual_result"],
 
             status=data.get("status", "open"),
             screenshot_id=data.get("screenshot_id"),

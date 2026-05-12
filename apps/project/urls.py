@@ -9,6 +9,7 @@ from .views import (
     TestCaseViewSet,
     BugViewSet,
     TestRunViewSet,
+    TestRunVersionViewSet,
 )
 
 router = DefaultRouter()
@@ -18,10 +19,15 @@ router.register('screens', ScreenViewSet, basename='screen')
 router.register('testcases', TestCaseViewSet, basename='testcase')
 router.register('bugs', BugViewSet, basename='bug')
 router.register('testruns', TestRunViewSet, basename='testrun')
+router.register(
+    r'testrun-versions',
+    TestRunVersionViewSet,
+    basename='testrun-versions'
+)
 
 
 
 urlpatterns = [
-    path('testcases/bulk-import/', bulk_import_testcases),  # ✅ FIRST
+    path('testcases/bulk-import/', bulk_import_testcases),  
     path("", include(router.urls)),
 ]

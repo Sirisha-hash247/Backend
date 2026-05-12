@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Project, Module, Screen
 from .models import TestCase
 from .models import Bug
-from .models import TestRun
+from .models import TestRun, TestRunVersion
 
 
 
@@ -92,23 +92,147 @@ from apps.project.models import TestRun
 
 class TestRunSerializer(serializers.ModelSerializer):
 
-    # 🔹 Readable fields
-    test_case_title = serializers.CharField(source="test_case.title", read_only=True)
-    executed_by_name = serializers.CharField(source="executed_by.email", read_only=True)
+    # =====================================================
+    # READABLE FIELDS
+    # =====================================================
+
+    testcase_title = serializers.CharField(
+        source="testcase.title",
+        read_only=True
+    )
+
+    executed_by_name = serializers.CharField(
+        source="executed_by.email",
+        read_only=True
+    )
+
+    version_number = serializers.CharField(
+        source="version.version_number",
+        read_only=True
+    )
 
     class Meta:
+
         model = TestRun
+
         fields = [
+
+            # IDs
+
             "uuid",
-            "test_case",
-            "test_case_title",
-            "actual_results",
-            "status",
+
+            "project",
+            "module",
+            "screen",
+
+            "version",
+            "version_number",
+
+            "testcase",
+            "testcase_title",
+
+            # SNAPSHOT DATA
+
+            "title",
+            "description",
+            "expected_results",
+            "steps",
+
+            "priority",
+            "type_of_testcase",
+            "display_order",
+
+            # EXECUTION DATA
+
+            "run_status",
+            "actual_result",
+            "notes",
+
             "executed_by",
             "executed_by_name",
-            "executed_at",
+
+            "started_at",
+            "completed_at",
+
+            # ACTIVITY TRACKING
+
+            "created_at",
+            "updated_at",
+
+            "created_by",
+            "updated_by",
         ]
-        read_only_fields = ["uuid", "executed_by", "executed_at"]
+
+        read_only_fields = [
+
+            "uuid",
+
+            "created_at",
+            "updated_at",
+
+            "created_by",
+            "updated_by",
+
+            "executed_by",
+
+            "started_at",
+            "completed_at",
+        ]
+
+class TestRunVersionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = TestRunVersion
+
+        fields = [
+
+            # ============================================
+            # SYSTEM FIELDS
+            # ============================================
+
+            "uuid",
+
+            "created_at",
+            "updated_at",
+
+            "created_by",
+            "updated_by",
+
+            "deleted_at",
+            "deleted_by",
+
+            # ============================================
+            # VERSION DATA
+            # ============================================
+
+            "project",
+            "module",
+            "screen",
+
+            "version_number",
+            "version_status",
+            "notes",
+        ]
+
+        read_only_fields = [
+
+            # SYSTEM GENERATED
+
+            "uuid",
+
+            "project",
+            "module",
+
+            "created_at",
+            "updated_at",
+
+            "created_by",
+            "updated_by",
+
+            "deleted_at",
+            "deleted_by",
+        ]
         
         
 # ✅ CREATE SERIALIZER FOR SWAGGER
