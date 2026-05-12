@@ -9,7 +9,7 @@ from drf_spectacular.utils import extend_schema
 from core.permissions import IsAdminUserRole, IsSuperAdmin, IsAdminOrSuperAdmin
 from core.roles import Roles
 
-from apps.users.models import User, Organization   # ✅ FIXED IMPORT
+from apps.users.models import User, Organization   
 from apps.users.serializers import (
     UserSerializer,
     RegisterSerializer,
@@ -66,6 +66,10 @@ class LoginView(APIView):
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses=MeSerializer
+    )
+
     def get(self, request):
         serializer = MeSerializer(request.user)
         return Response(serializer.data)
@@ -73,61 +77,133 @@ class MeView(APIView):
 # ---------------- USERS ---------------- #
 
 class UserListView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrSuperAdmin]
 
-    # GET (LIST USERS)
+    permission_classes = [
+        IsAuthenticated,
+        IsAdminOrSuperAdmin
+    ]
+
+    # =====================================================
+    # GET USERS
+    # =====================================================
+
+    @extend_schema(
+        responses={200: UserSerializer(many=True)}
+    )
     def get(self, request):
-        users = get_all_users(request.user)
-        return Response(UserSerializer(users, many=True).data)
 
+        users = get_all_users(request.user)
+
+        return Response(
+            UserSerializer(users, many=True).data
+        )
+
+    # =====================================================
     # CREATE USER
+    # =====================================================
+
+    @extend_schema(
+        request=UserSerializer,
+        responses={201: UserSerializer},
+    )
     def post(self, request):
-        serializer = UserSerializer(data=request.data)
+
+        serializer = UserSerializer(
+            data=request.data
+        )
+
         serializer.is_valid(raise_exception=True)
 
-        # 🔒 ADMIN → only inside their org
+        # ADMIN → only inside their org
         if request.user.role != Roles.SUPER_ADMIN:
-            serializer.save(organization=request.user.organization)
+
+            serializer.save(
+                organization=request.user.organization
+            )
+
         else:
+
             serializer.save()
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED
+        )
 
+    # =====================================================
     # UPDATE USER
+    # =====================================================
+
+    @extend_schema(
+        request=UserSerializer,
+        responses={200: UserSerializer},
+    )
     def patch(self, request, user_id):
+
         try:
+
             if request.user.role == Roles.SUPER_ADMIN:
-                user = User.objects.get(id=user_id)
+
+                user = User.objects.get(
+                    id=user_id
+                )
+
             else:
+
                 user = User.objects.get(
                     id=user_id,
                     organization=request.user.organization
                 )
+
         except User.DoesNotExist:
+
             raise ValidationError("User not found")
 
-        serializer = UserSerializer(user, data=request.data, partial=True)
+        serializer = UserSerializer(
+            user,
+            data=request.data,
+            partial=True
+        )
+
         serializer.is_valid(raise_exception=True)
+
         serializer.save()
 
         return Response(serializer.data)
 
+    # =====================================================
     # DELETE USER
+    # =====================================================
+
+    @extend_schema(
+        responses={204: None}
+    )
     def delete(self, request, user_id):
+
         try:
+
             if request.user.role == Roles.SUPER_ADMIN:
-                user = User.objects.get(id=user_id)
+
+                user = User.objects.get(
+                    id=user_id
+                )
+
             else:
+
                 user = User.objects.get(
                     id=user_id,
                     organization=request.user.organization
                 )
+
         except User.DoesNotExist:
+
             raise ValidationError("User not found")
 
         user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 # ---------------- ORGANIZATION ---------------- #
 
