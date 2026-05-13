@@ -5,6 +5,7 @@ from apps.project.models import TestRun, TestCase
 from apps.users.models import User
 from django.utils import timezone
 
+
 class TestRunService:
 
     @staticmethod
@@ -52,9 +53,8 @@ class TestRunService:
 
         test_run.save()
 
-
         return test_run
-    
+
     @staticmethod
     def get_by_version(version_id):
 

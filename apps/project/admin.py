@@ -5,7 +5,7 @@ from .models import Project, Module, Screen
 # ---------------- PROJECT ADMIN ----------------
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'status', 'created_by', 'created_at')
+    list_display = ('uuid', 'title', 'status', 'created_by', 'created_at')
     search_fields = ('title',)
     list_filter = ('status', 'created_at')
     ordering = ('-created_at',)
