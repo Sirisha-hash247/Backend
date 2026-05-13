@@ -9,7 +9,7 @@ from drf_spectacular.utils import extend_schema
 from core.permissions import IsAdminUserRole, IsSuperAdmin, IsAdminOrSuperAdmin
 from core.roles import Roles
 
-from apps.users.models import User, Organization   # ✅ FIXED IMPORT
+from apps.users.models import User, Organization   # ✅ FIXED IM    PORT
 from apps.users.serializers import (
     UserSerializer,
     RegisterSerializer,
