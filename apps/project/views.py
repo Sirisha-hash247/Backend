@@ -52,6 +52,7 @@ def org_filter(qs, user):
 # PROJECT  —  Admin/SuperAdmin only
 # ─────────────────────────────────────────────
 class ProjectViewSet(ModelViewSet):
+    lookup_field = "uuid"
     serializer_class = ProjectSerializer
 
     def get_permissions(self):
@@ -64,7 +65,7 @@ class ProjectViewSet(ModelViewSet):
         user = self.request.user
 
         if not user.is_authenticated:
-            return Model.objects.none()
+            return Project.objects.none()
 
         if user.role == "superadmin":
             return Project.objects.filter(deleted_at__isnull=True)
@@ -97,6 +98,7 @@ class ProjectViewSet(ModelViewSet):
 # MODULE
 # ─────────────────────────────────────────────
 class ModuleViewSet(ModelViewSet):
+    lookup_field = "uuid"
     serializer_class = ModuleSerializer
 
     def get_permissions(self):
@@ -111,7 +113,7 @@ class ModuleViewSet(ModelViewSet):
         user = self.request.user
 
         if not user.is_authenticated:
-            return Model.objects.none()
+            return Module.objects.none()
         qs = Module.objects.filter(deleted_at__isnull=True)
 
         if user.role != "superadmin":
@@ -119,7 +121,7 @@ class ModuleViewSet(ModelViewSet):
 
         project_id = self.request.query_params.get("project")
         if project_id:
-            qs = qs.filter(project__id=project_id)
+            qs = qs.filter(project__uuid=project_id)
 
         return qs
 
@@ -146,6 +148,7 @@ class ModuleViewSet(ModelViewSet):
 # SCREEN
 # ─────────────────────────────────────────────
 class ScreenViewSet(ModelViewSet):
+    lookup_field = "uuid"
     serializer_class = ScreenSerializer
 
     def get_permissions(self):
@@ -160,7 +163,7 @@ class ScreenViewSet(ModelViewSet):
         user = self.request.user
 
         if not user.is_authenticated:
-            return Model.objects.none()
+            return Screen.objects.none()
         qs = Screen.objects.filter(deleted_at__isnull=True)
 
         if user.role != "superadmin":
@@ -195,6 +198,7 @@ class ScreenViewSet(ModelViewSet):
 # TEST CASE  —  Admin + Tester: CRU  |  Reviewer: R
 # ─────────────────────────────────────────────
 class TestCaseViewSet(ModelViewSet):
+    lookup_field = "uuid"
     serializer_class = TestCaseSerializer
 
     def get_permissions(self):
@@ -209,7 +213,7 @@ class TestCaseViewSet(ModelViewSet):
         user = self.request.user
 
         if not user.is_authenticated:
-            return Model.objects.none()
+            return TestCase.objects.none()
         screen_id = self.request.query_params.get("screen")
 
         if user.role == "superadmin":
@@ -246,6 +250,8 @@ class TestCaseViewSet(ModelViewSet):
 # TEST RUN  —  Admin + Tester: CRU  |  Reviewer: R + comment patch
 # ─────────────────────────────────────────────
 class TestRunViewSet(ModelViewSet):
+
+    lookup_field = "uuid"
 
     serializer_class = TestRunSerializer
 
@@ -295,7 +301,7 @@ class TestRunViewSet(ModelViewSet):
         user = self.request.user
 
         if not user.is_authenticated:
-            return Model.objects.none()
+            return TestRun.objects.none()
 
         screen_id = self.request.query_params.get("screen")
 
@@ -362,7 +368,7 @@ class TestRunViewSet(ModelViewSet):
 
         test_run = self.get_object()
 
-        updated_test_run = TestRunVersionService.update_test_run(
+        updated_test_run = TestRunService.update_test_run(
             test_run,
             request.data,
             request.user
@@ -439,6 +445,7 @@ class TestRunViewSet(ModelViewSet):
 # BUG  —  Admin + Tester: CRUD  |  Reviewer: R + comment patch
 # ─────────────────────────────────────────────
 class BugViewSet(ModelViewSet):
+    lookup_field = "uuid"
     serializer_class = BugSerializer
 
     def get_permissions(self):
@@ -456,7 +463,7 @@ class BugViewSet(ModelViewSet):
         user = self.request.user
 
         if not user.is_authenticated:
-            return Model.objects.none()
+            return Bug.objects.none()
         screen_id = self.request.query_params.get("screen")
 
         if user.role == "superadmin":
@@ -533,6 +540,7 @@ def bulk_import_testcases(request):
 class TestRunVersionViewSet(ModelViewSet):
 
     queryset = TestRunVersion.objects.filter(deleted_at__isnull=True)
+    lookup_field = "uuid"
 
     serializer_class = TestRunVersionSerializer
 
