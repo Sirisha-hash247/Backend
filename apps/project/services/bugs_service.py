@@ -23,7 +23,7 @@ def create_bug(user, data):
 
         # -------- FETCH RELATIONS --------
         try:
-            project = Project.objects.get(id=data["project"])
+            project = Project.objects.get(uuid=data["project"])
         except Project.DoesNotExist:
             raise ValidationError("Invalid project")
 

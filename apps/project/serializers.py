@@ -180,6 +180,14 @@ class TestRunSerializer(serializers.ModelSerializer):
         ]
 
 class TestRunVersionSerializer(serializers.ModelSerializer):
+    total_executions = serializers.SerializerMethodField()
+
+    def get_total_executions(self, obj):
+
+         return obj.testruns.exclude(
+        run_status="not_started"
+    ).count()
+
 
     class Meta:
 
@@ -213,6 +221,7 @@ class TestRunVersionSerializer(serializers.ModelSerializer):
             "version_number",
             "version_status",
             "notes",
+            "total_executions",
         ]
 
         read_only_fields = [
