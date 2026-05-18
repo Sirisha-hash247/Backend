@@ -7,25 +7,96 @@ from .models import TestRun, TestRunVersion
 
 
 class ScreenSerializer(serializers.ModelSerializer):
+
     class Meta:
+
         model = Screen
-        fields = '__all__'
-        read_only_fields = [
-            'created_by', 'updated_by', 'deleted_by',
-            'created_at', 'updated_at', 'deleted_at'
+
+        fields = [
+
+            "uuid",
+
+            "module",
+
+            "name",
+
+            "description",
+
+            "code",
+
+            "created_at",
+            "updated_at",
+            "deleted_at",
+
+            "created_by",
+            "updated_by",
+            "deleted_by",
         ]
+
+        read_only_fields = [
+
+            "uuid",
+
+            "created_by",
+            "updated_by",
+            "deleted_by",
+
+            "created_at",
+            "updated_at",
+            "deleted_at",
+        ]
+
+    def validate_code(self, value):
+
+        return value.upper()
 
 
 class ModuleSerializer(serializers.ModelSerializer):
-    screens = ScreenSerializer(many=True, read_only=True)
+
+    screens = ScreenSerializer(
+        many=True,
+        read_only=True
+    )
 
     class Meta:
+
         model = Module
-        fields = '__all__'
-        read_only_fields = [
-            'created_by', 'updated_by', 'deleted_by',
-            'created_at', 'updated_at', 'deleted_at'
+
+        fields = [
+            "uuid",
+
+            "project",
+
+            "name",
+
+            "code",
+
+            "screens",
+
+            "created_at",
+            "updated_at",
+            "deleted_at",
+
+            "created_by",
+            "updated_by",
+            "deleted_by",
         ]
+
+        read_only_fields = [
+            "uuid",
+
+            "created_by",
+            "updated_by",
+            "deleted_by",
+
+            "created_at",
+            "updated_at",
+            "deleted_at",
+        ]
+
+    def validate_code(self, value):
+
+        return value.upper()
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -129,6 +200,7 @@ class TestRunSerializer(serializers.ModelSerializer):
             "version_number",
 
             "testcase",
+            "tc_id",
             "testcase_title",
 
             # SNAPSHOT DATA
@@ -180,6 +252,14 @@ class TestRunSerializer(serializers.ModelSerializer):
         ]
 
 class TestRunVersionSerializer(serializers.ModelSerializer):
+    total_executions = serializers.SerializerMethodField()
+
+    def get_total_executions(self, obj):
+
+         return obj.testruns.exclude(
+        run_status="not_started"
+    ).count()
+
 
     class Meta:
 
@@ -213,6 +293,7 @@ class TestRunVersionSerializer(serializers.ModelSerializer):
             "version_number",
             "version_status",
             "notes",
+            "total_executions",
         ]
 
         read_only_fields = [
