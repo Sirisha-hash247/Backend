@@ -40,16 +40,68 @@ class Project(BaseModel):
 
 class Module(BaseModel):
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    project = models.ForeignKey('project.Project', on_delete=models.CASCADE, related_name='modules')
-    name = models.CharField(max_length=255)
+    uuid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    project = models.ForeignKey(
+        'project.Project',
+        on_delete=models.CASCADE,
+        related_name='modules'
+    )
+
+    name = models.CharField(
+        max_length=255
+    )
+
+    code = models.CharField(
+        max_length=20,
+        unique=True
+    )
+
+    def __str__(self):
+
+        return f"{self.name} ({self.code})"
 
 class Screen(BaseModel):
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='screens')
-    name = models.CharField(max_length=255)
-    description = models.TextField(null=True, blank=True)
+    uuid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.CASCADE,
+        related_name='screens'
+    )
+
+    name = models.CharField(
+        max_length=255
+    )
+
+    description = models.TextField(
+        null=True,
+        blank=True
+    )
+
+    code = models.CharField(
+        max_length=20
+    )
+
+    class Meta:
+
+        unique_together = (
+            "module",
+            "code"
+        )
+
+    def __str__(self):
+
+        return f"{self.name} ({self.code})"
 
 
 class TestCase(BaseModel):
@@ -79,7 +131,21 @@ class TestCase(BaseModel):
         ('usability', 'Usability Testing'),
     )
 
-    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    uuid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    # NEW FIELD
+    # Example:
+    # TC-AUTH-SIGNUP-001
+
+    tc_id = models.CharField(
+        max_length=100,
+        unique=True,
+        editable=False
+    )
 
     screen = models.ForeignKey(
         Screen,
@@ -87,7 +153,9 @@ class TestCase(BaseModel):
         related_name='testcases'
     )
 
-    title = models.CharField(max_length=255)
+    title = models.CharField(
+        max_length=255
+    )
 
     description = models.TextField()
 
@@ -108,9 +176,14 @@ class TestCase(BaseModel):
         choices=TYPE_CHOICES
     )
 
-    steps = models.JSONField(null=True, blank=True)
+    steps = models.JSONField(
+        null=True,
+        blank=True
+    )
 
-    display_order = models.PositiveIntegerField(default=0)
+    display_order = models.PositiveIntegerField(
+        default=0
+    )
 
     assigned_to = models.ForeignKey(
         User,
@@ -119,6 +192,45 @@ class TestCase(BaseModel):
         blank=True,
         related_name='assigned_testcases'
     )
+
+    def save(self, *args, **kwargs):
+
+        # Generate TC ID only during creation
+
+        if not self.tc_id:
+
+            module_code = (
+                self.screen.module.code.upper()
+            )
+
+            screen_code = (
+                self.screen.code.upper()
+            )
+
+            # Count existing testcases
+            # inside same screen
+
+            count = TestCase.objects.filter(
+                screen=self.screen
+            ).count() + 1
+
+            sequence = str(count).zfill(3)
+
+            # Example:
+            # TC-AUTH-SIGNUP-001
+
+            self.tc_id = (
+                f"TC-"
+                f"{module_code}-"
+                f"{screen_code}-"
+                f"{sequence}"
+            )
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+
+        return f"{self.tc_id} - {self.title}"
 
 
 class TestRunVersion(BaseModel):
@@ -203,6 +315,10 @@ class TestRun(BaseModel):
         Screen,
         on_delete=models.CASCADE,
         related_name='testruns'
+    )
+
+    tc_id = models.CharField(
+        max_length=100
     )
 
     version = models.ForeignKey(

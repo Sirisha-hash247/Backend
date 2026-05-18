@@ -98,100 +98,259 @@ class ProjectViewSet(ModelViewSet):
 # MODULE
 # ─────────────────────────────────────────────
 class ModuleViewSet(ModelViewSet):
+
     lookup_field = "uuid"
+
     serializer_class = ModuleSerializer
 
     def get_permissions(self):
+
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), IsAdminTesterOrReviewer()]
+
+            return [
+                IsAuthenticated(),
+                IsAdminTesterOrReviewer()
+            ]
+
         elif self.action == 'destroy':
-            return [IsAuthenticated(), IsAdminOrSuperAdmin()]
+
+            return [
+                IsAuthenticated(),
+                IsAdminOrSuperAdmin()
+            ]
+
         else:
-            return [IsAuthenticated(), IsAdminOrTester()]
+
+            return [
+                IsAuthenticated(),
+                IsAdminOrTester()
+            ]
 
     def get_queryset(self):
+
         user = self.request.user
 
         if not user.is_authenticated:
+
             return Module.objects.none()
-        qs = Module.objects.filter(deleted_at__isnull=True)
+
+        queryset = Module.objects.filter(
+            deleted_at__isnull=True
+        )
+
+        # Organization filter
 
         if user.role != "superadmin":
-            qs = qs.filter(project__organization=user.organization)
 
-        project_id = self.request.query_params.get("project")
+            queryset = queryset.filter(
+                project__organization=user.organization
+            )
+
+        # Project filter
+
+        project_id = self.request.query_params.get(
+            "project"
+        )
+
         if project_id:
-            qs = qs.filter(project__uuid=project_id)
 
-        return qs
+            queryset = queryset.filter(
+                project__uuid=project_id
+            )
+
+        return queryset.order_by("name")
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        module = ModuleService.create_module(request.user, serializer.validated_data)
-        return Response(ModuleSerializer(module).data, status=status.HTTP_201_CREATED)
+
+        serializer = self.get_serializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        module = ModuleService.create_module(
+            request.user,
+            serializer.validated_data
+        )
+
+        return Response(
+
+            ModuleSerializer(module).data,
+
+            status=status.HTTP_201_CREATED
+        )
 
     def update(self, request, *args, **kwargs):
+
         module = self.get_object()
-        serializer = self.get_serializer(module, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        module = ModuleService.update_module(module, request.user, serializer.validated_data)
-        return Response(ModuleSerializer(module).data)
+
+        serializer = self.get_serializer(
+
+            module,
+
+            data=request.data,
+
+            partial=True
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        updated_module = (
+            ModuleService.update_module(
+                module,
+                request.user,
+                serializer.validated_data
+            )
+        )
+
+        return Response(
+            ModuleSerializer(updated_module).data
+        )
 
     def destroy(self, request, *args, **kwargs):
-        module = self.get_object()
-        ModuleService.delete_module(module)
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
+        module = self.get_object()
+
+        ModuleService.delete_module(
+            module
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 # ─────────────────────────────────────────────
 # SCREEN
 # ─────────────────────────────────────────────
 class ScreenViewSet(ModelViewSet):
+
     lookup_field = "uuid"
+
     serializer_class = ScreenSerializer
 
     def get_permissions(self):
+
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), IsAdminTesterOrReviewer()]
+
+            return [
+                IsAuthenticated(),
+                IsAdminTesterOrReviewer()
+            ]
+
         elif self.action == 'destroy':
-            return [IsAuthenticated(), IsAdminOrSuperAdmin()]
+
+            return [
+                IsAuthenticated(),
+                IsAdminOrSuperAdmin()
+            ]
+
         else:
-            return [IsAuthenticated(), IsAdminOrTester()]
+
+            return [
+                IsAuthenticated(),
+                IsAdminOrTester()
+            ]
 
     def get_queryset(self):
+
         user = self.request.user
 
         if not user.is_authenticated:
+
             return Screen.objects.none()
-        qs = Screen.objects.filter(deleted_at__isnull=True)
+
+        queryset = Screen.objects.filter(
+            deleted_at__isnull=True
+        )
+
+        # Organization filter
 
         if user.role != "superadmin":
-            qs = qs.filter(module__project__organization=user.organization)
 
-        module_id = self.request.query_params.get("module")
+            queryset = queryset.filter(
+                module__project__organization=user.organization
+            )
+
+        # Module filter
+
+        module_id = self.request.query_params.get(
+            "module"
+        )
+
         if module_id:
-            qs = qs.filter(module__uuid=module_id)
 
-        return qs
+            queryset = queryset.filter(
+                module__uuid=module_id
+            )
+
+        return queryset.order_by("name")
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        screen = ScreenService.create_screen(request.user, serializer.validated_data)
-        return Response(ScreenSerializer(screen).data, status=status.HTTP_201_CREATED)
+
+        serializer = self.get_serializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        screen = ScreenService.create_screen(
+            request.user,
+            serializer.validated_data
+        )
+
+        return Response(
+
+            ScreenSerializer(screen).data,
+
+            status=status.HTTP_201_CREATED
+        )
 
     def update(self, request, *args, **kwargs):
+
         screen = self.get_object()
-        serializer = self.get_serializer(screen, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        screen = ScreenService.update_screen(screen, request.user, serializer.validated_data)
-        return Response(ScreenSerializer(screen).data)
+
+        serializer = self.get_serializer(
+
+            screen,
+
+            data=request.data,
+
+            partial=True
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        updated_screen = (
+            ScreenService.update_screen(
+                screen,
+                request.user,
+                serializer.validated_data
+            )
+        )
+
+        return Response(
+            ScreenSerializer(updated_screen).data
+        )
 
     def destroy(self, request, *args, **kwargs):
+
         screen = self.get_object()
-        ScreenService.delete_screen(screen)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+        ScreenService.delete_screen(
+            screen
+        )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 
 # ─────────────────────────────────────────────
@@ -543,6 +702,35 @@ class TestRunVersionViewSet(ModelViewSet):
     lookup_field = "uuid"
 
     serializer_class = TestRunVersionSerializer
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="latest"
+    )
+    def latest(self, request):
+
+        screen_id = request.query_params.get(
+            "screen_id"
+        )
+
+        latest_version = (
+            TestRunVersionService
+            .get_latest_version(screen_id)
+        )
+
+        if not latest_version:
+
+            return Response(
+                {"message": "No version found"},
+                status=404
+            )
+
+        serializer = self.get_serializer(
+            latest_version
+        )
+
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
 

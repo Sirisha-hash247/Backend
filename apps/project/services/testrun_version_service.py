@@ -9,6 +9,14 @@ from apps.project.models import (
 class TestRunVersionService:
 
     @staticmethod
+    def get_latest_version(screen_id):
+
+        return TestRunVersion.objects.filter(
+            screen_id=screen_id,
+            deleted_at__isnull=True
+        ).order_by("-created_at").first()
+
+    @staticmethod
     def create_version(data, user):
 
         screen = Screen.objects.get(
@@ -90,6 +98,8 @@ class TestRunVersionService:
                     version=version,
 
                     testcase=testcase,
+
+                    tc_id=testcase.tc_id,
 
                     title=testcase.title,
 
