@@ -1,5 +1,6 @@
 # apps/project/views.py
 from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import TestCase
 from django_q.tasks import async_task
@@ -23,7 +24,8 @@ from core.permissions import (
 from .models import Project, Module, Screen, TestCase, Bug, TestRun, TestRunVersion
 from .serializers import (
     ProjectSerializer, ModuleSerializer, ScreenSerializer,
-    TestCaseSerializer, BugSerializer, TestRunSerializer, TestRunVersionSerializer
+    TestCaseSerializer, BugSerializer, TestRunSerializer, TestRunVersionSerializer, KPISerializer, DailyTrendSerializer,
+    FailureTrendSerializer, HeatmapSerializer, PassFailSerializer, RecentActivitySerializer, TesterProductivitySerializer, RiskyModuleSerializer,
 )
 from .services.project_service import create_project, get_all_projects, update_project, delete_project
 from .services.module_service import ModuleService
@@ -32,6 +34,7 @@ from .services.testcase_service import create_testcase
 from .services.bugs_service import create_bug
 from .services.testrun_service import TestRunService
 from .services.testrun_version_service import TestRunVersionService
+from .services.dashboard_services import (KPIService, TrendService, HeatmapService, ActivityService, ProductivityService )
 
 
 from drf_spectacular.utils import extend_schema
@@ -557,5 +560,132 @@ class TestRunVersionViewSet(ModelViewSet):
             serializer.data,
             status=status.HTTP_201_CREATED
         )
+    
+
+#Dashboard Analytics
+
+class KPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        data = KPIService.get_kpis()
+
+        serializer = KPISerializer(data)
+
+        return Response(serializer.data)
+
+
+class DailyTrendView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        data = TrendService.daily_execution_trend()
+
+        serializer = DailyTrendSerializer(
+            data,
+            many=True
+        )
+
+        return Response(serializer.data)
+
+
+class FailureTrendView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        data = TrendService.failure_trend()
+
+        serializer = FailureTrendSerializer(
+            data,
+            many=True
+        )
+
+        return Response(serializer.data)
+
+
+class HeatmapView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        data = HeatmapService.module_heatmap()
+
+        serializer = HeatmapSerializer(
+            data,
+            many=True
+        )
+
+        return Response(serializer.data)
+
+
+class PassFailView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        data = HeatmapService.pass_fail_distribution()
+
+        serializer = PassFailSerializer(
+            data,
+            many=True
+        )
+
+        return Response(serializer.data)
+
+
+class RecentActivityView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        data = ActivityService.recent_activity()
+
+        serializer = RecentActivitySerializer(
+            data,
+            many=True
+        )
+
+        return Response(serializer.data)
+
+class TesterProductivityView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        data = ProductivityService.tester_productivity()
+
+        serializer = TesterProductivitySerializer(
+            data,
+            many=True
+        )
+
+        return Response(serializer.data)
+
+
+class RiskyModulesView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        data = ProductivityService.risky_modules()
+
+        serializer = RiskyModuleSerializer(
+            data,
+            many=True
+        )
+
+        return Response(serializer.data)
+
 
 

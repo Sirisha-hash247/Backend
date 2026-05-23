@@ -253,3 +253,110 @@ class BulkTestCaseSerializer(serializers.Serializer):
     status = serializers.CharField()
     screen = serializers.CharField()
 
+#Dashboard Analytics:
+
+class KPISerializer(serializers.Serializer):
+
+    total_executed = serializers.IntegerField()
+
+    pass_percentage = serializers.FloatField()
+
+    failed = serializers.IntegerField()
+
+    blocked = serializers.IntegerField()
+
+    critical_failures = serializers.IntegerField()
+
+    total_bugs = serializers.IntegerField()
+
+class DailyTrendSerializer(
+    serializers.Serializer
+):
+
+    date = serializers.DateField()
+
+    executed = serializers.IntegerField()
+
+    passed = serializers.IntegerField()
+
+    failed = serializers.IntegerField()
+
+
+class FailureTrendSerializer(
+    serializers.Serializer
+):
+
+    date = serializers.DateField()
+
+    failures = serializers.IntegerField()
+
+class HeatmapSerializer(
+    serializers.Serializer
+):
+
+    name = serializers.CharField()
+
+    tests = serializers.IntegerField()
+
+    failures = serializers.IntegerField()
+
+    rate = serializers.FloatField()
+
+    risk = serializers.CharField()
+
+class PassFailSerializer(
+    serializers.Serializer
+):
+
+    name = serializers.CharField()
+
+    value = serializers.IntegerField()
+
+    color = serializers.CharField()
+
+class RecentActivitySerializer(
+    serializers.Serializer
+):
+
+    id = serializers.CharField()
+
+    type = serializers.CharField()
+
+    user = serializers.CharField()
+
+    action = serializers.CharField()
+
+    target = serializers.CharField()
+
+    time = serializers.DateTimeField()
+
+
+class TesterProductivitySerializer(
+    serializers.Serializer
+):
+
+    name = serializers.CharField()
+
+    executed = serializers.IntegerField()
+
+    passRate = serializers.FloatField()
+
+    bugs = serializers.IntegerField()
+
+    productivity = serializers.CharField()
+
+class RiskyModuleSerializer(
+    serializers.Serializer
+):
+
+    module = serializers.CharField()
+
+    failures = serializers.IntegerField()
+
+    failureRate = serializers.FloatField()
+
+    severity = serializers.CharField()
+
+
+
+
