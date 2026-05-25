@@ -9,7 +9,9 @@ from drf_spectacular.utils import extend_schema
 from core.permissions import IsAdminUserRole, IsSuperAdmin, IsAdminOrSuperAdmin
 from core.roles import Roles
 
+
 from apps.users.models import User, Organization   
+
 from apps.users.serializers import (
     UserSerializer,
     RegisterSerializer,
