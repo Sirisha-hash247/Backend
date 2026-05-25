@@ -10,7 +10,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 
+from .serializers import BulkTestCaseSerializer
+from django_q.tasks import async_task
+
+
+
 from django.utils import timezone
+
+from .pagination import CustomPagination
 
 from core.permissions import (
     IsAdminOrSuperAdmin,
@@ -356,54 +363,51 @@ class ScreenViewSet(ModelViewSet):
 # ─────────────────────────────────────────────
 # TEST CASE  —  Admin + Tester: CRU  |  Reviewer: R
 # ─────────────────────────────────────────────
-class TestCaseViewSet(ModelViewSet):
-    lookup_field = "uuid"
-    serializer_class = TestCaseSerializer
 
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), IsAdminTesterOrReviewer()]
-        elif self.action == 'destroy':
-            return [IsAuthenticated(), IsAdminOrSuperAdmin()]
-        else:
-            return [IsAuthenticated(), IsAdminOrTester()]
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.filters import SearchFilter
 
-    def get_queryset(self):
-        user = self.request.user
+from .models import TestCase
+from .serializers import TestCaseSerializer
+from .pagination import CustomPagination
 
-        if not user.is_authenticated:
-            return TestCase.objects.none()
-        screen_id = self.request.query_params.get("screen")
 
-        if user.role == "superadmin":
-            qs = TestCase.objects.all()
-        else:
-            qs = TestCase.objects.filter(
-                screen__module__project__organization=user.organization
-            )
 
-        if screen_id:
-            qs = qs.filter(screen__uuid=screen_id)
-
-        return qs
-
-    def create(self, request, *args, **kwargs):
-        testcase = create_testcase(request.user, request.data)
-        return Response(TestCaseSerializer(testcase).data, status=status.HTTP_201_CREATED)
-
-    def update(self, request, *args, **kwargs):
-        testcase = self.get_object()
-        serializer = self.get_serializer(testcase, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(updated_by=request.user)
-        return Response(serializer.data)
-
-    def destroy(self, request, *args, **kwargs):
-        testcase = self.get_object()
-        testcase.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
     
 
+
+class TestCaseViewSet(ModelViewSet):
+
+    queryset = TestCase.objects.all().order_by("-created_at")
+
+    serializer_class = TestCaseSerializer
+
+    pagination_class = CustomPagination
+
+    filter_backends = [SearchFilter]
+
+    search_fields = [
+        "title",
+        "description"
+    ]
+
+    lookup_field = "uuid"
+
+    def get_queryset(self):
+
+        queryset = super().get_queryset()
+
+        screen = self.request.query_params.get(
+            "screen"
+        )
+
+        if screen:
+
+            queryset = queryset.filter(
+                screen=screen
+            )
+
+        return queryset
 
 # ─────────────────────────────────────────────
 # TEST RUN  —  Admin + Tester: CRU  |  Reviewer: R + comment patch
@@ -414,92 +418,7 @@ class TestRunViewSet(ModelViewSet):
 
     serializer_class = TestRunSerializer
 
-    # =====================================================
-    # PERMISSIONS
-    # =====================================================
-
-    def get_permissions(self):
-
-        if self.action in [
-            'list',
-            'retrieve',
-            'by_version'
-        ]:
-            return [
-                IsAuthenticated(),
-                IsAdminTesterOrReviewer()
-            ]
-
-        elif self.action == 'add_comment':
-
-            return [
-                IsAuthenticated(),
-                IsAdminTesterOrReviewer()
-            ]
-
-        elif self.action == 'destroy':
-
-            return [
-                IsAuthenticated(),
-                IsAdminOrSuperAdmin()
-            ]
-
-        else:
-
-            return [
-                IsAuthenticated(),
-                IsAdminOrTester()
-            ]
-
-    # =====================================================
-    # QUERYSET
-    # =====================================================
-
-    def get_queryset(self):
-
-        user = self.request.user
-
-        if not user.is_authenticated:
-            return TestRun.objects.none()
-
-        screen_id = self.request.query_params.get("screen")
-
-        version_id = self.request.query_params.get("version")
-
-        if user.role == "superadmin":
-
-            queryset = TestRun.objects.filter(
-                deleted_at__isnull=True
-            )
-
-        else:
-
-            queryset = TestRun.objects.filter(
-                version__project__organization=user.organization,
-                deleted_at__isnull=True
-            )
-
-        # FILTER BY SCREEN
-
-        if screen_id:
-
-            queryset = queryset.filter(
-                screen__uuid=screen_id
-            )
-
-        # FILTER BY VERSION
-
-        if version_id:
-
-            queryset = queryset.filter(
-                version_id=version_id
-            )
-
-        return queryset.order_by("display_order")
-
-    # =====================================================
-    # GET TEST RUNS BY VERSION
-    # =====================================================
+    pagination_class = CustomPagination
 
     @action(
         detail=False,
@@ -512,6 +431,21 @@ class TestRunViewSet(ModelViewSet):
             version_id
         )
 
+        page = self.paginate_queryset(
+            queryset
+        )
+
+        if page is not None:
+
+            serializer = self.get_serializer(
+                page,
+                many=True
+            )
+
+            return self.get_paginated_response(
+                serializer.data
+            )
+
         serializer = self.get_serializer(
             queryset,
             many=True
@@ -519,161 +453,76 @@ class TestRunViewSet(ModelViewSet):
 
         return Response(serializer.data)
 
-    # =====================================================
-    # UPDATE TEST EXECUTION
-    # =====================================================
-
-    def partial_update(self, request, *args, **kwargs):
-
-        test_run = self.get_object()
-
-        updated_test_run = TestRunService.update_test_run(
-            test_run,
-            request.data,
-            request.user
-        )
-
-        serializer = self.get_serializer(
-            updated_test_run
-        )
-
-        return Response(serializer.data)
-
-    # =====================================================
-    # REVIEWER COMMENT PATCH
-    # =====================================================
-
-    @action(
-        detail=True,
-        methods=['patch'],
-        url_path='comment'
-    )
-    def add_comment(self, request, pk=None):
-
-        test_run = self.get_object()
-
-        allowed_fields = {
-            'notes'
-        }
-
-        data = {
-            key: value
-            for key, value in request.data.items()
-            if key in allowed_fields
-        }
-
-        serializer = self.get_serializer(
-            test_run,
-            data=data,
-            partial=True
-        )
-
-        serializer.is_valid(raise_exception=True)
-
-        serializer.save(
-            updated_by=request.user
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
-
-    # =====================================================
-    # SOFT DELETE
-    # =====================================================
-
-    def destroy(self, request, *args, **kwargs):
-
-        test_run = self.get_object()
-
-        test_run.deleted_by = request.user
-
-        test_run.deleted_at = timezone.now()
-
-        test_run.save()
-
-        return Response(
-            {
-                "message": "Test run deleted successfully"
-            },
-            status=status.HTTP_204_NO_CONTENT
-        )
-
 # ─────────────────────────────────────────────
 # BUG  —  Admin + Tester: CRUD  |  Reviewer: R + comment patch
 # ─────────────────────────────────────────────
+
+    
+    
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.filters import SearchFilter
+
+from .models import Bug
+from .serializers import BugSerializer
+from .pagination import CustomPagination
+
+
 class BugViewSet(ModelViewSet):
-    lookup_field = "uuid"
+
+    queryset = Bug.objects.all().order_by("-created_at")
+
     serializer_class = BugSerializer
 
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), IsAdminTesterOrReviewer()]
-        elif self.action == 'add_comment':
-            return [IsAuthenticated(), IsAdminTesterOrReviewer()]
-        elif self.action == 'destroy':
-            # Tester CAN delete bugs (CRUD), reviewer cannot
-            return [IsAuthenticated(), IsAdminOrTester()]
-        else:
-            return [IsAuthenticated(), IsAdminOrTester()]
+    pagination_class = CustomPagination
+
+    filter_backends = [SearchFilter]
+
+    search_fields = [
+        "description",
+        "actual_result"
+    ]
+
+    lookup_field = "uuid"
 
     def get_queryset(self):
-        user = self.request.user
 
-        if not user.is_authenticated:
-            return Bug.objects.none()
-        screen_id = self.request.query_params.get("screen")
+        queryset = super().get_queryset()
 
-        if user.role == "superadmin":
-            qs = Bug.objects.all()
-        else:
-            qs = Bug.objects.filter(
-                project__organization=user.organization
+        screen = self.request.query_params.get(
+            "screen"
+        )
+
+        if screen:
+
+            queryset = queryset.filter(
+                screen=screen
             )
 
-        if screen_id:
-            qs = qs.filter(screen__uuid=screen_id)
+        return queryset
 
-        return qs
 
-    def create(self, request, *args, **kwargs):
-        bug = create_bug(request.user, request.data)
-        return Response(BugSerializer(bug).data, status=status.HTTP_201_CREATED)
 
-    def update(self, request, *args, **kwargs):
-        bug = self.get_object()
-        serializer = self.get_serializer(bug, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(updated_by=request.user)
-        return Response(serializer.data)
 
-    def destroy(self, request, *args, **kwargs):
-        bug = self.get_object()
-        bug.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+class TestRunVersionViewSet(ModelViewSet):
 
-    # Reviewer-specific PATCH — only comment/status
-    @action(detail=True, methods=['patch'], url_path='comment')
-    def add_comment(self, request, pk=None):
-        bug = self.get_object()
-        allowed_fields = {'status', 'actual_result'}
-        data = {k: v for k, v in request.data.items() if k in allowed_fields}
-        serializer = self.get_serializer(bug, data=data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(updated_by=request.user)
-        return Response(serializer.data)
+    queryset = TestRunVersion.objects.filter(
+        deleted_at__isnull=True
+    )
+
+    lookup_field = "uuid"
+
+    serializer_class = TestRunVersionSerializer
+
+    pagination_class = CustomPagination
     
     
-    
-from rest_framework.decorators import api_view
+    from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema
 
-from .models import TestCase
+from .serializers import BulkTestCaseSerializer
 
-
+from django_q.tasks import async_task
 
 
 @extend_schema(
@@ -682,7 +531,9 @@ from .models import TestCase
 )
 @api_view(['POST'])
 def bulk_import_testcases(request):
+
     data = request.data
+
     user_id = request.user.id
 
     async_task(
@@ -691,59 +542,6 @@ def bulk_import_testcases(request):
         user_id
     )
 
-    return Response({"message": "Bulk import started"})
-
-
-
-
-class TestRunVersionViewSet(ModelViewSet):
-
-    queryset = TestRunVersion.objects.filter(deleted_at__isnull=True)
-    lookup_field = "uuid"
-
-    serializer_class = TestRunVersionSerializer
-
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="latest"
-    )
-    def latest(self, request):
-
-        screen_id = request.query_params.get(
-            "screen_id"
-        )
-
-        latest_version = (
-            TestRunVersionService
-            .get_latest_version(screen_id)
-        )
-
-        if not latest_version:
-
-            return Response(
-                {"message": "No version found"},
-                status=404
-            )
-
-        serializer = self.get_serializer(
-            latest_version
-        )
-
-        return Response(serializer.data)
-
-    def create(self, request, *args, **kwargs):
-
-        version = TestRunVersionService.create_version(
-            request.data,
-            request.user
-        )
-
-        serializer = self.get_serializer(version)
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED
-        )
-
-
+    return Response({
+        "message": "Bulk import started"
+    })
