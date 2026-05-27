@@ -148,31 +148,23 @@ class TestCaseSerializer(serializers.ModelSerializer):
         return data
 
 class BugSerializer(serializers.ModelSerializer):
-    bug_id = serializers.CharField(read_only=True)
 
-    tc_id = serializers.CharField(
-        source="testcase.tc_id",
-        read_only=True
-    )
+    # =========================================
+    # FETCH TC ID
+    # =========================================
 
+    tc_id = serializers.SerializerMethodField()
+
+    def get_tc_id(self, obj):
+
+        if obj.testcase:
+
+            return obj.testcase.tc_id
+
+        return None
     class Meta:
         model = Bug
-        fields = [
-    "uuid",
-    "bug_id",
-    "tc_id",
-    "description",
-    "steps_to_reproduce",
-    "severity",
-    "expected_results",
-    "actual_result",
-    "status",
-    "created_at",
-    "project",
-    "module",
-    "screen",
-    "testcase",
-]
+        fields = '__all__'
         read_only_fields = [
             'created_by', 'updated_by', 'deleted_by',
             'created_at', 'updated_at', 'deleted_at'
@@ -346,4 +338,3 @@ class BulkTestCaseSerializer(serializers.Serializer):
     priority = serializers.CharField()
     status = serializers.CharField()
     screen = serializers.CharField()
-

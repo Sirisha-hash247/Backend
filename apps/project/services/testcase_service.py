@@ -1,103 +1,181 @@
 from django.utils import timezone
+
 from rest_framework.exceptions import ValidationError
 
-from apps.project.models import TestCase, Screen
+from apps.project.models import (
+    TestCase,
+    Screen
+)
+
 from apps.users.models import User
 
 
-def create_testcase(user, data):
-    """
-    Create a new TestCase
-    """
+class TestCaseService:
 
-    try:
+    # ============================================
+    # GENERATE TC ID
+    # ============================================
 
-        # ---------------- REQUIRED FIELDS ----------------
+    @staticmethod
+    def generate_tc_id(screen):
 
-        required_fields = [
-            "title",
-            "description",
-            "expected_results",
-            "priority",
-            "type_of_testcase",
-            "screen",
-        ]
+        module_code = (
+            screen.module.code.upper()
+        )
 
-        for field in required_fields:
+        screen_code = (
+            screen.code.upper()
+        )
 
-            if field not in data or data[field] in [None, ""]:
+        last_testcase = (
 
-                raise ValidationError(
-                    f"{field} is required"
-                )
-
-        # ---------------- SCREEN FETCH ----------------
-
-        try:
-
-            screen = Screen.objects.get(
-                uuid=data["screen"]
+            TestCase.objects.filter(
+                screen=screen
             )
 
-        except Screen.DoesNotExist:
-
-            raise ValidationError(
-                "Invalid screen UUID"
+            .exclude(
+                tc_id__isnull=True
             )
 
-        # ---------------- ASSIGNED USER (OPTIONAL) ----------------
+            .exclude(
+                tc_id=""
+            )
 
-        assigned_user = None
+            .order_by("-tc_id")
 
-        if data.get("assigned_to"):
+            .first()
+        )
+
+        next_sequence = 1
+
+        if (
+            last_testcase
+            and last_testcase.tc_id
+        ):
 
             try:
 
-                assigned_user = User.objects.get(
-                    id=data["assigned_to"]
+                last_sequence = int(
+
+                    last_testcase.tc_id
+                    .split("-")[-1]
                 )
 
-            except User.DoesNotExist:
-
-                raise ValidationError(
-                    "Invalid assigned_to user"
+                next_sequence = (
+                    last_sequence + 1
                 )
 
-        steps = data.get("steps", {})
+            except Exception:
 
-        # ---------------- CREATE TESTCASE ----------------
+                next_sequence = 1
 
-        testcase = TestCase.objects.create(
+        return (
 
-            screen=screen,
+            f"TC-"
 
-            title=data["title"],
+            f"{module_code}-"
 
-            description=data["description"],
+            f"{screen_code}-"
 
-            expected_results=data[
-                "expected_results"
-            ],
-
-            priority=data["priority"],
-
-            type_of_testcase=data[
-                "type_of_testcase"
-            ],
-
-            assigned_to=assigned_user,
-
-            steps=steps,
-
-            # BaseModel fields
-
-            created_by=user,
-
-            updated_by=user,
+            f"{str(next_sequence).zfill(3)}"
         )
 
-        return testcase
+    # ============================================
+    # CREATE TESTCASE
+    # ============================================
 
-    except Exception as e:
+    @staticmethod
+    def create_testcase(user, data):
+        """
+        Create a new TestCase
+        """
 
-        raise ValidationError(str(e))
+        try:
+
+            # ---------------- REQUIRED FIELDS ----------------
+
+            required_fields = [
+                "title",
+                "description",
+                "expected_results",
+                "priority",
+                "type_of_testcase",
+                "screen",
+            ]
+
+            for field in required_fields:
+
+                if (
+                    field not in data
+                    or data[field] in [None, ""]
+                ):
+
+                    raise ValidationError(
+                        f"{field} is required"
+                    )
+
+            # ---------------- SCREEN FETCH ----------------
+
+            screen = data["screen"]
+
+            # ---------------- ASSIGNED USER (OPTIONAL) ----------------
+
+            assigned_user = data.get(
+                 "assigned_to"
+            )
+
+            # ---------------- STEPS ----------------
+
+            steps = data.get("steps", {})
+
+            # ---------------- GENERATE TC ID ----------------
+
+            tc_id = (
+                TestCaseService.generate_tc_id(
+                    screen
+                )
+            )
+
+            # ---------------- CREATE TESTCASE ----------------
+
+            testcase = TestCase.objects.create(
+
+                tc_id=tc_id,
+
+                screen=screen,
+
+                title=data["title"],
+
+                description=data["description"],
+
+                expected_results=data[
+                    "expected_results"
+                ],
+
+                priority=data["priority"],
+
+                status=data.get(
+                    "status",
+                    "open"
+                ),
+
+                type_of_testcase=data[
+                    "type_of_testcase"
+                ],
+
+                assigned_to=assigned_user,
+
+                steps=steps,
+
+                # BaseModel fields
+
+                created_by=user,
+
+                updated_by=user,
+            )
+
+            return testcase
+
+        except Exception as e:
+
+            raise ValidationError(str(e))

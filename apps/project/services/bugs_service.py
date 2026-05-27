@@ -9,155 +9,241 @@ from apps.project.models import (
 )
 
 
-def create_bug(user, data):
+class BugService:
 
-    try:
+    # =====================================================
+    # GENERATE BUG ID
+    # Example:
+    # B-AUTH-SIGNUP-001
+    # =====================================================
 
-        # -------- REQUIRED FIELDS --------
+    @staticmethod
+    def generate_bug_id(screen):
 
-        required_fields = [
-            "project",
-            "module",
-            "screen",
-            "description",
-            "steps_to_reproduce",
-            "severity",
-            "expected_results",
-            "actual_result",
-        ]
+        module_code = (
+            screen.module.code.upper()
+        )
 
-        for field in required_fields:
+        screen_code = (
+            screen.code.upper()
+        )
 
-            if field not in data or data[field] in [None, ""]:
+        last_bug = (
 
-                raise ValidationError(
-                    f"{field} is required"
-                )
-
-        # -------- FETCH RELATIONS --------
-
-        try:
-
-            project = Project.objects.get(
-                uuid=data["project"]
+            Bug.objects.filter(
+                screen=screen
             )
 
-        except Project.DoesNotExist:
-
-            raise ValidationError(
-                "Invalid project"
+            .exclude(
+                bug_id__isnull=True
             )
 
-        try:
+            .order_by("-bug_id")
 
-            module = Module.objects.get(
-                uuid=data["module"]
-            )
+            .first()
+        )
 
-        except Module.DoesNotExist:
+        next_sequence = 1
 
-            raise ValidationError(
-                "Invalid module"
-            )
-
-        try:
-
-            screen = Screen.objects.get(
-                uuid=data["screen"]
-            )
-
-        except Screen.DoesNotExist:
-
-            raise ValidationError(
-                "Invalid screen"
-            )
-
-        testcase = None
-
-        if data.get("testcase"):
+        if (
+            last_bug
+            and last_bug.bug_id
+        ):
 
             try:
 
-                testcase = TestCase.objects.get(
-                    uuid=data["testcase"]
+                last_sequence = int(
+
+                    last_bug.bug_id
+                    .split("-")[-1]
                 )
 
-            except TestCase.DoesNotExist:
+                next_sequence = (
+                    last_sequence + 1
+                )
+
+            except:
+
+                next_sequence = 1
+
+        return (
+
+            f"B-"
+
+            f"{module_code}-"
+
+            f"{screen_code}-"
+
+            f"{str(next_sequence).zfill(3)}"
+        )
+
+    # =====================================================
+    # CREATE BUG
+    # =====================================================
+
+    @staticmethod
+    def create_bug(user, data):
+
+        try:
+
+            # -------- REQUIRED FIELDS --------
+
+            required_fields = [
+
+                "project",
+
+                "module",
+
+                "screen",
+
+                "description",
+
+                "steps_to_reproduce",
+
+                "severity",
+
+                "expected_results",
+
+                "actual_result",
+            ]
+
+            for field in required_fields:
+
+                if (
+                    field not in data
+                    or data[field] in [None, ""]
+                ):
+
+                    raise ValidationError(
+                        f"{field} is required"
+                    )
+
+            # -------- FETCH PROJECT --------
+
+            try:
+
+                project = Project.objects.get(
+                    uuid=data["project"]
+                )
+
+            except Project.DoesNotExist:
 
                 raise ValidationError(
-                    "Invalid testcase"
+                    "Invalid project"
                 )
 
-        # -------- GENERATE BUG ID --------
+            # -------- FETCH MODULE --------
 
-        module_code = module.code.upper()
+            try:
 
-        screen_code = screen.code.upper()
+                module = Module.objects.get(
+                    uuid=data["module"]
+                )
 
-        count = Bug.objects.filter(
-            screen=screen
-        ).count() + 1
+            except Module.DoesNotExist:
 
-        sequence = str(count).zfill(3)
+                raise ValidationError(
+                    "Invalid module"
+                )
 
-        bug_id = (
-            f"B-"
-            f"{module_code}-"
-            f"{screen_code}-"
-            f"{sequence}"
-        )
+            # -------- FETCH SCREEN --------
 
-        # -------- CREATE BUG --------
-        print("BUG ID =", bug_id)
+            try:
 
-        bug = Bug.objects.create(
+                screen = Screen.objects.get(
+                    uuid=data["screen"]
+                )
 
-            bug_id=bug_id,
+            except Screen.DoesNotExist:
 
-            project=project,
-            module=module,
-            screen=screen,
-            testcase=testcase,
+                raise ValidationError(
+                    "Invalid screen"
+                )
 
-            test_cycle_id=data.get(
-                "test_cycle_id"
-            ),
+            # -------- FETCH TESTCASE --------
 
-            description=data[
-                "description"
-            ],
+            testcase = None
 
-            steps_to_reproduce=data[
-                "steps_to_reproduce"
-            ],
+            if data.get("testcase"):
 
-            severity=data[
-                "severity"
-            ],
+                try:
 
-            expected_results=data[
-                "expected_results"
-            ],
+                    testcase = TestCase.objects.get(
+                        uuid=data["testcase"]
+                    )
 
-            actual_result=data[
-                "actual_result"
-            ],
+                except TestCase.DoesNotExist:
 
-            status=data.get(
-                "status",
-                "open"
-            ),
+                    raise ValidationError(
+                        "Invalid testcase"
+                    )
 
-            screenshot_id=data.get(
-                "screenshot_id"
-            ),
+            # =====================================================
+            # GENERATE BUG ID
+            # =====================================================
 
-            created_by=user,
-            updated_by=user,
-        )
+            bug_id = (
+                BugService.generate_bug_id(
+                    screen
+                )
+            )
 
-        return bug
+            # =====================================================
+            # CREATE BUG
+            # =====================================================
 
-    except Exception as e:
+            bug = Bug.objects.create(
 
-        raise ValidationError(str(e))
+                bug_id=bug_id,
+
+                project=project,
+
+                module=module,
+
+                screen=screen,
+
+                testcase=testcase,
+
+                test_cycle_id=data.get(
+                    "test_cycle_id"
+                ),
+
+                description=data[
+                    "description"
+                ],
+
+                steps_to_reproduce=data[
+                    "steps_to_reproduce"
+                ],
+
+                severity=data[
+                    "severity"
+                ],
+
+                expected_results=data[
+                    "expected_results"
+                ],
+
+                actual_result=data[
+                    "actual_result"
+                ],
+
+                status=data.get(
+                    "status",
+                    "open"
+                ),
+
+                screenshot_id=data.get(
+                    "screenshot_id"
+                ),
+
+                created_by=user,
+
+                updated_by=user,
+            )
+
+            return bug
+
+        except Exception as e:
+
+            raise ValidationError(str(e))

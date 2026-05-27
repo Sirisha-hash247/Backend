@@ -142,9 +142,11 @@ class TestCase(BaseModel):
     # TC-AUTH-SIGNUP-001
 
     tc_id = models.CharField(
-        max_length=100,
-        unique=True,
-        editable=False
+    max_length=100,
+    unique=True,
+    blank=True,
+    null=True,
+    editable=False
     )
 
     screen = models.ForeignKey(
@@ -193,40 +195,6 @@ class TestCase(BaseModel):
         related_name='assigned_testcases'
     )
 
-    def save(self, *args, **kwargs):
-
-        # Generate TC ID only during creation
-
-        if not self.tc_id:
-
-            module_code = (
-                self.screen.module.code.upper()
-            )
-
-            screen_code = (
-                self.screen.code.upper()
-            )
-
-            # Count existing testcases
-            # inside same screen
-
-            count = TestCase.objects.filter(
-                screen=self.screen
-            ).count() + 1
-
-            sequence = str(count).zfill(3)
-
-            # Example:
-            # TC-AUTH-SIGNUP-001
-
-            self.tc_id = (
-                f"TC-"
-                f"{module_code}-"
-                f"{screen_code}-"
-                f"{sequence}"
-            )
-
-        super().save(*args, **kwargs)
 
     def __str__(self):
 
@@ -414,17 +382,18 @@ class Bug(BaseModel):
     )
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='bugs')
+    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='bugs')
+    screen = models.ForeignKey(Screen, on_delete=models.CASCADE, related_name='bugs')
+
     bug_id = models.CharField(
     max_length=100,
     unique=True,
     editable=False,
     null=True,
     blank=True
-)
-
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='bugs')
-    module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='bugs')
-    screen = models.ForeignKey(Screen, on_delete=models.CASCADE, related_name='bugs')
+    )
 
     testcase = models.ForeignKey(
         TestCase,
@@ -448,37 +417,5 @@ class Bug(BaseModel):
 
     screenshot_id = models.UUIDField(null=True, blank=True)
 
-    def save(self, *args, **kwargs):
-
-        # Generate Bug ID only during creation
-        if not self.bug_id:
-
-            module_code = (
-                self.module.code.upper()
-            )
-
-            screen_code = (
-                self.screen.code.upper()
-            )
-
-            # Count existing bugs in same screen
-            count = Bug.objects.filter(
-                screen=self.screen
-            ).count() + 1
-
-            sequence = str(count).zfill(3)
-
-            # Example:
-            # B-AUTH-REG-001
-
-            self.bug_id = (
-                f"B-"
-                f"{module_code}-"
-                f"{screen_code}-"
-                f"{sequence}"
-            )
-
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        return f"{self.bug_id} - {self.description[:50]}"
+        return self.description[:50]
