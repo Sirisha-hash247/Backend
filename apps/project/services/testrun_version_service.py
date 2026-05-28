@@ -19,55 +19,72 @@ class TestRunVersionService:
     @staticmethod
     def create_version(data, user):
 
+    # ============================================
+    # FETCH SCREEN
+    # ============================================
+
         screen = Screen.objects.get(
             uuid=data["screen"]
         )
 
-        module = screen.module
+    # ============================================
+    # GET PROJECT & MODULE FROM USER SELECTION
+    # ============================================
 
-        project = module.project
+        project_id = data.get("project")
 
-        # ============================================
-        # AUTO VERSION NUMBER
-        # ============================================
+        module_id = data.get("module")
 
-        existing_versions_count = (
-            TestRunVersion.objects.filter(
-                screen=screen,
-                deleted_at__isnull=True
-            ).count()
-        )
+    # ============================================
+    # VALIDATION
+    # ============================================
 
-        next_version_number = (
-            f"v{existing_versions_count + 1}"
-        )
+        if not project_id:
 
-        # ============================================
-        # CREATE VERSION
-        # ============================================
+            raise Exception(
+                "Project is required"
+            )
+
+        if not module_id:
+
+            raise Exception(
+                "Module is required"
+            )
+
+    # ============================================
+    # CREATE VERSION
+    # ============================================
 
         version = TestRunVersion.objects.create(
 
-            project=project,
+            project_id=project_id,
 
-            module=module,
+            module_id=module_id,
 
             screen=screen,
 
-            version_number=next_version_number,
+            version_number=data[
+                "version_number"
+            ],
 
-            version_status="draft",
+            version_status=data.get(
+                "version_status",
+                "draft"
+            ),
 
-            notes=f"Snapshot for {next_version_number}",
+            notes=data.get(
+                "notes",
+                ""
+            ),
 
             created_by=user,
 
             updated_by=user,
         )
 
-        # ============================================
-        # GET ALL CURRENT TESTCASES
-        # ============================================
+    # ============================================
+    # GET TESTCASES
+    # ============================================
 
         testcases = TestCase.objects.filter(
 
@@ -79,9 +96,9 @@ class TestRunVersionService:
 
         test_run_objects = []
 
-        # ============================================
-        # COPY CURRENT TESTCASE PAGE
-        # ============================================
+    # ============================================
+    # COPY TESTCASES INTO TESTRUNS
+    # ============================================
 
         for testcase in testcases:
 
@@ -89,9 +106,9 @@ class TestRunVersionService:
 
                 TestRun(
 
-                    project=project,
+                    project_id=project_id,
 
-                    module=module,
+                    module_id=module_id,
 
                     screen=screen,
 
@@ -105,15 +122,18 @@ class TestRunVersionService:
 
                     description=testcase.description,
 
-                    expected_results=testcase.expected_results,
+                    expected_results=
+                    testcase.expected_results,
 
                     steps=testcase.steps,
 
                     priority=testcase.priority,
 
-                    type_of_testcase=testcase.type_of_testcase,
+                    type_of_testcase=
+                    testcase.type_of_testcase,
 
-                    display_order=testcase.display_order,
+                    display_order=
+                    testcase.display_order,
 
                     created_by=user,
 
@@ -122,9 +142,9 @@ class TestRunVersionService:
 
             )
 
-        # ============================================
-        # CREATE TEST RUNS
-        # ============================================
+    # ============================================
+    # BULK CREATE TESTRUNS
+    # ============================================
 
         TestRun.objects.bulk_create(
             test_run_objects
