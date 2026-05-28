@@ -518,6 +518,10 @@ class TestCaseViewSet(ModelViewSet):
 # ─────────────────────────────────────────────
 # TEST RUN  —  Admin + Tester: CRU  |  Reviewer: R + comment patch
 # ─────────────────────────────────────────────
+
+# ─────────────────────────────────────────────
+# TEST RUN  —  Admin + Tester: CRU  |  Reviewer: R + comment patch
+# ─────────────────────────────────────────────
 class TestRunViewSet(ModelViewSet):
 
     lookup_field = "uuid"
@@ -574,9 +578,17 @@ class TestRunViewSet(ModelViewSet):
         if not user.is_authenticated:
             return TestRun.objects.none()
 
-        screen_id = self.request.query_params.get("screen")
+        screen_id = self.request.query_params.get(
+            "screen"
+        )
 
-        version_id = self.request.query_params.get("version")
+        version_id = self.request.query_params.get(
+            "version"
+        )
+
+        testing_type = self.request.query_params.get(
+            "type"
+        )
 
         if user.role == "superadmin":
 
@@ -607,28 +619,86 @@ class TestRunViewSet(ModelViewSet):
                 version_id=version_id
             )
 
-        return queryset.order_by("display_order")
+        # FILTER BY TEST TYPE
+
+        if testing_type:
+
+            type_mapping = {
+
+                "Functional Testing": "functional",
+
+                "Regression Testing": "regression",
+
+                "Smoke Testing": "smoke",
+
+                "Sanity Testing": "system",
+
+                "API Testing": "integration",
+            }
+
+            mapped_type = type_mapping.get(
+                testing_type
+            )
+
+            if mapped_type:
+
+                queryset = queryset.filter(
+                    testcase__type_of_testcase=mapped_type
+                )
+
+        return queryset.order_by(
+            "display_order"
+        )
 
     # =====================================================
     # GET TEST RUNS BY VERSION
     # =====================================================
 
     @action(
-    detail=False,
-    methods=["get"],
-    url_path="by-version/(?P<version_id>[^/.]+)"
+        detail=False,
+        methods=["get"],
+        url_path="by-version/(?P<version_id>[^/.]+)"
     )
     def by_version(self, request, version_id=None):
 
         queryset = (
             TestRunService.get_by_version(
-            version_id
+                version_id
             )
         )
 
-    # =========================================
-    # SEARCH
-    # =========================================
+        # FILTER BY TEST TYPE
+
+        testing_type = request.query_params.get(
+            "type"
+        )
+
+        if testing_type:
+
+            type_mapping = {
+
+                "Functional Testing": "functional",
+
+                "Regression Testing": "regression",
+
+                "Smoke Testing": "smoke",
+
+                "Sanity Testing": "system",
+
+                "API Testing": "integration",
+            }
+
+            mapped_type = type_mapping.get(
+                testing_type
+            )
+
+            if mapped_type:
+
+                queryset = queryset.filter(
+                    testcase__type_of_testcase=mapped_type
+                )
+
+        # SEARCH
 
         search = request.query_params.get(
             "search"
@@ -640,9 +710,7 @@ class TestRunViewSet(ModelViewSet):
                 title__icontains=search
             )
 
-    # =========================================
-    # PAGINATION
-    # =========================================
+        # PAGINATION
 
         page = self.paginate_queryset(
             queryset
@@ -665,6 +733,7 @@ class TestRunViewSet(ModelViewSet):
         )
 
         return Response(serializer.data)
+
     # =====================================================
     # UPDATE TEST EXECUTION
     # =====================================================
@@ -714,7 +783,9 @@ class TestRunViewSet(ModelViewSet):
             partial=True
         )
 
-        serializer.is_valid(raise_exception=True)
+        serializer.is_valid(
+            raise_exception=True
+        )
 
         serializer.save(
             updated_by=request.user
@@ -745,6 +816,8 @@ class TestRunViewSet(ModelViewSet):
             },
             status=status.HTTP_204_NO_CONTENT
         )
+
+
 
 # ─────────────────────────────────────────────
 # BUG  —  Admin + Tester: CRUD  |  Reviewer: R + comment patch
@@ -848,7 +921,55 @@ def bulk_import_testcases(request):
 
 class TestRunVersionViewSet(ModelViewSet):
 
-    queryset = TestRunVersion.objects.filter(deleted_at__isnull=True)
+    serializer_class = TestRunVersionSerializer
+
+    lookup_field = "uuid"
+
+    def get_queryset(self):
+
+        queryset = TestRunVersion.objects.filter(
+            deleted_at__isnull=True
+        )
+
+        screen_id = self.request.query_params.get(
+            "screen_id"
+        )
+
+        module_id = self.request.query_params.get(
+            "module_id"
+        )
+
+        project_id = self.request.query_params.get(
+            "project_id"
+        )
+
+        # FILTER PROJECT
+
+        if project_id:
+
+            queryset = queryset.filter(
+                project__uuid=project_id
+            )
+
+        # FILTER MODULE
+
+        if module_id:
+
+            queryset = queryset.filter(
+                module__uuid=module_id
+            )
+
+        # FILTER SCREEN
+
+        if screen_id:
+
+            queryset = queryset.filter(
+                screen__uuid=screen_id
+            )
+
+        return queryset.order_by(
+            "-created_at"
+        )
     lookup_field = "uuid"
 
     serializer_class = TestRunVersionSerializer

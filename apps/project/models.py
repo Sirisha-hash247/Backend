@@ -380,6 +380,10 @@ class Bug(BaseModel):
         ('open', 'Open'),
         ('closed', 'Closed'),
     )
+    ISSUE_TYPE_CHOICES = (
+    ('ui', 'UI Issue'),
+    ('functionality', 'Functionality Issue'),
+)
 
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -414,6 +418,11 @@ class Bug(BaseModel):
     actual_result = models.TextField()
 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='open')
+    issue_type = models.CharField(
+    max_length=20,
+    choices=ISSUE_TYPE_CHOICES,
+    default='functionality'
+)
 
     screenshot_id = models.UUIDField(null=True, blank=True)
 
