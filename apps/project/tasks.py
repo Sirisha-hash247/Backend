@@ -1,6 +1,25 @@
 from .models import TestCase, Screen
-
+from apps.project.services.testcase_service import TestCaseService
 def bulk_import_testcases_task(data, user_id):
+    
+    tc_id = TestCaseService.generate_tc_id(screen)
+    
+    testcase = TestCase.objects.create(
+    tc_id=tc_id,
+    title=row.get("title"),
+    description=row.get("description"),
+    expected_results=row.get("expected_results"),
+    priority=row.get("priority", "medium"),
+    status=row.get("status", "open"),
+    type_of_testcase=row.get("type_of_testcase", "functional"),
+    steps=steps,
+    screen=screen,
+    created_by_id=user_id,
+    updated_by_id=user_id,
+)
+    
+    
+    
 
     print("TASK STARTED")
 

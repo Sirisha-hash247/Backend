@@ -98,11 +98,16 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'testing_db',
         'USER': 'postgres',
-        'PASSWORD': 'drowssap@123',
-        'HOST': '192.168.1.12',
-        'PORT': '5432',
+        'PASSWORD': '147258',
+        'HOST': 'localhost',
+        'PORT': '5433',
     }
 }
+
+
+
+
+
 
 
 # Password validation
