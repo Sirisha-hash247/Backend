@@ -186,6 +186,8 @@ class TestCase(BaseModel):
     display_order = models.PositiveIntegerField(
         default=0
     )
+    
+    
 
     assigned_to = models.ForeignKey(
         User,
@@ -294,6 +296,13 @@ class TestRun(BaseModel):
         on_delete=models.CASCADE,
         related_name='testruns'
     )
+    session = models.ForeignKey(
+    "TestSession",
+    on_delete=models.CASCADE,
+    null=True,
+    blank=True,
+    related_name="testruns"
+)
 
     testcase = models.ForeignKey(
         TestCase,
@@ -363,6 +372,26 @@ class TestRun(BaseModel):
         null=True,
         blank=True
     )
+    
+    # REVIEWER DATA
+
+    reviewer_comments = models.TextField(
+    null=True,
+    blank=True
+    )
+
+    reviewed_by = models.ForeignKey(
+    User,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name="reviewed_runs"
+    )
+
+    reviewed_at = models.DateTimeField(
+    null=True,
+    blank=True
+    )
 
     def __str__(self):
         return self.title
@@ -428,3 +457,56 @@ class Bug(BaseModel):
 
     def __str__(self):
         return self.description[:50]
+    
+    
+class TestSession(BaseModel):
+
+    uuid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+
+    version = models.ForeignKey(
+        TestRunVersion,
+        on_delete=models.CASCADE,
+        related_name="sessions"
+    )
+
+    session_name = models.CharField(
+        max_length=255
+    )
+
+    testing_type = models.CharField(
+        max_length=50
+    )
+
+    status = models.CharField(
+        max_length=50,
+        default="active"
+    )
+
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=50,
+        default="active"
+    )
+
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
