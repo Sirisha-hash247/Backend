@@ -105,6 +105,9 @@ class BugService:
                 "expected_results",
 
                 "actual_result",
+                
+                
+                "issue_type",
             ]
 
             for field in required_fields:
@@ -232,6 +235,10 @@ class BugService:
                     "status",
                     "open"
                 ),
+                
+                issue_type=data.get(
+    "issue_type"
+),
 
                 screenshot_id=data.get(
                     "screenshot_id"

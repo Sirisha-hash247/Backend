@@ -137,10 +137,19 @@ class TestCaseService:
             )
 
             # ---------------- CREATE TESTCASE ----------------
+            
+            
+            display_order = (
+    TestCase.objects.filter(
+        screen=screen
+    ).count() + 1
+)
 
             testcase = TestCase.objects.create(
 
                 tc_id=tc_id,
+                
+                display_order=display_order,
 
                 screen=screen,
 

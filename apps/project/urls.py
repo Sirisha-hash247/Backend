@@ -10,6 +10,7 @@ from .views import (
     BugViewSet,
     TestRunViewSet,
     TestRunVersionViewSet,
+    TestSessionViewSet, 
 )
 
 router = DefaultRouter()
@@ -23,6 +24,12 @@ router.register(
     r'testrun-versions',
     TestRunVersionViewSet,
     basename='testrun-versions'
+)
+
+router.register(
+    'testsessions',
+    TestSessionViewSet,
+    basename='testsession'
 )
 
 

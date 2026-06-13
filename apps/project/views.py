@@ -1,4 +1,9 @@
 # apps/project/views.py
+from marshal import version
+from urllib import request
+
+from django.utils import timezone
+
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import TestCase
@@ -20,10 +25,17 @@ from core.permissions import (
     IsReviewer,
 )
 
-from .models import Project, Module, Screen, TestCase, Bug, TestRun, TestRunVersion
+from .models import Project, Module, Screen, TestCase, Bug, TestRun, TestRunVersion,TestSession
 from .serializers import (
-    ProjectSerializer, ModuleSerializer, ScreenSerializer,
-    TestCaseSerializer, BugSerializer, TestRunSerializer, TestRunVersionSerializer
+    ProjectSerializer,
+    ModuleSerializer,
+    ScreenSerializer,
+    TestCaseSerializer,
+    BugSerializer,
+    TestRunSerializer,
+    TestRunVersionSerializer,
+    TestSessionSerializer,
+     
 )
 from .services.project_service import create_project, get_all_projects, update_project, delete_project
 from .services.module_service import ModuleService
@@ -32,6 +44,7 @@ from .services.testcase_service import TestCaseService
 from .services.bugs_service import BugService
 from .services.testrun_service import TestRunService
 from .services.testrun_version_service import TestRunVersionService
+from .services.testsession_service import TestSessionService
 
 
 from drf_spectacular.utils import extend_schema
@@ -424,7 +437,10 @@ class TestCaseViewSet(ModelViewSet):
                 screen__uuid=screen_id
             )
 
-        return qs
+        return qs.order_by(
+    "display_order",
+    "tc_id"
+)
 
     # ============================================
     # CREATE TESTCASE
@@ -465,35 +481,29 @@ class TestCaseViewSet(ModelViewSet):
     # UPDATE TESTCASE
     # ============================================
 
-    def update(
-        self,
-        request,
-        *args,
-        **kwargs
-    ):
+    def update(self, request, *args, **kwargs):
 
-        testcase = self.get_object()
+     testcase = self.get_object()
 
-        serializer = self.get_serializer(
+     data = request.data.copy()
 
-            testcase,
+    # Keep existing screen if frontend doesn't send it
+     if not data.get("screen"):
+        data["screen"] = str(testcase.screen.uuid)
 
-            data=request.data,
+     serializer = self.get_serializer(
+        testcase,
+        data=data,
+        partial=True
+     )
 
-            partial=True
-        )
+     serializer.is_valid(raise_exception=True)
 
-        serializer.is_valid(
-            raise_exception=True
-        )
+     serializer.save(
+        updated_by=request.user
+     )
 
-        serializer.save(
-            updated_by=request.user
-        )
-
-        return Response(
-            serializer.data
-        )
+     return Response(serializer.data)
 
     # ============================================
     # DELETE TESTCASE
@@ -514,6 +524,10 @@ class TestCaseViewSet(ModelViewSet):
             status=status.HTTP_204_NO_CONTENT
         )
 
+
+# ─────────────────────────────────────────────
+# TEST RUN  —  Admin + Tester: CRU  |  Reviewer: R + comment patch
+# ─────────────────────────────────────────────
 
 # ─────────────────────────────────────────────
 # TEST RUN  —  Admin + Tester: CRU  |  Reviewer: R + comment patch
@@ -566,6 +580,24 @@ class TestRunViewSet(ModelViewSet):
     # =====================================================
     # QUERYSET
     # =====================================================
+    
+    
+    def perform_update(self, serializer):
+
+     user = self.request.user
+
+     if user.role == "reviewer":
+
+        serializer.save(
+            reviewed_by=user,
+            reviewed_at=timezone.now()
+        )
+
+     else:
+
+        serializer.save(
+            updated_by=user
+        )
 
     def get_queryset(self):
 
@@ -574,9 +606,21 @@ class TestRunViewSet(ModelViewSet):
         if not user.is_authenticated:
             return TestRun.objects.none()
 
-        screen_id = self.request.query_params.get("screen")
+        screen_id = self.request.query_params.get(
+            "screen"
+        )
 
-        version_id = self.request.query_params.get("version")
+        version_id = self.request.query_params.get(
+            "version"
+        )
+
+        testing_type = self.request.query_params.get(
+            "type"
+        )
+        
+        session_id = self.request.query_params.get(
+    "session"
+)
 
         if user.role == "superadmin":
 
@@ -606,29 +650,93 @@ class TestRunViewSet(ModelViewSet):
             queryset = queryset.filter(
                 version_id=version_id
             )
+            
+        if session_id:
 
-        return queryset.order_by("display_order")
+            queryset = queryset.filter(
+            session_id=session_id
+    )
+
+        # FILTER BY TEST TYPE
+
+        if testing_type:
+
+            type_mapping = {
+
+                "Functional Testing": "functional",
+
+                "Regression Testing": "regression",
+
+                "Smoke Testing": "smoke",
+
+                "Sanity Testing": "system",
+
+                "API Testing": "integration",
+            }
+
+            mapped_type = type_mapping.get(
+                testing_type
+            )
+
+            if mapped_type:
+
+                queryset = queryset.filter(
+                    type_of_testcase=mapped_type
+                )
+
+        return queryset.order_by(
+            "display_order"
+        )
 
     # =====================================================
     # GET TEST RUNS BY VERSION
     # =====================================================
 
     @action(
-    detail=False,
-    methods=["get"],
-    url_path="by-version/(?P<version_id>[^/.]+)"
+        detail=False,
+        methods=["get"],
+        url_path="by-version/(?P<version_id>[^/.]+)"
     )
     def by_version(self, request, version_id=None):
 
         queryset = (
             TestRunService.get_by_version(
-            version_id
+                version_id
             )
         )
 
-    # =========================================
-    # SEARCH
-    # =========================================
+        # FILTER BY TEST TYPE
+
+        testing_type = request.query_params.get(
+            "type"
+        )
+
+        if testing_type:
+
+            type_mapping = {
+
+                "Functional Testing": "functional",
+
+                "Regression Testing": "regression",
+
+                "Smoke Testing": "smoke",
+
+                "Sanity Testing": "system",
+
+                "API Testing": "integration",
+            }
+
+            mapped_type = type_mapping.get(
+                testing_type
+            )
+
+            if mapped_type:
+
+                queryset = queryset.filter(
+                    type_of_testcase=mapped_type
+                )
+
+        # SEARCH
 
         search = request.query_params.get(
             "search"
@@ -640,9 +748,7 @@ class TestRunViewSet(ModelViewSet):
                 title__icontains=search
             )
 
-    # =========================================
-    # PAGINATION
-    # =========================================
+        # PAGINATION
 
         page = self.paginate_queryset(
             queryset
@@ -665,6 +771,7 @@ class TestRunViewSet(ModelViewSet):
         )
 
         return Response(serializer.data)
+
     # =====================================================
     # UPDATE TEST EXECUTION
     # =====================================================
@@ -690,40 +797,49 @@ class TestRunViewSet(ModelViewSet):
     # =====================================================
 
     @action(
-        detail=True,
-        methods=['patch'],
-        url_path='comment'
-    )
-    def add_comment(self, request, pk=None):
+    detail=True,
+    methods=["patch"],
+    url_path="comment"
+)
+    def add_comment(self, request, *args, **kwargs):
 
-        test_run = self.get_object()
+     test_run = self.get_object()
 
-        allowed_fields = {
-            'notes'
-        }
-
-        data = {
-            key: value
-            for key, value in request.data.items()
-            if key in allowed_fields
-        }
-
-        serializer = self.get_serializer(
-            test_run,
-            data=data,
-            partial=True
-        )
-
-        serializer.is_valid(raise_exception=True)
-
-        serializer.save(
-            updated_by=request.user
-        )
-
+     if request.user.role != "reviewer":
         return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
+            {"detail": "Only reviewers can add comments."},
+            status=status.HTTP_403_FORBIDDEN
         )
+
+     serializer = self.get_serializer(
+        test_run,
+        data={
+            "reviewer_comments": request.data.get(
+                "reviewer_comments"
+            )
+        },
+        partial=True
+     )
+
+     serializer.is_valid(raise_exception=True)
+
+     serializer.save(
+
+    reviewer_comments=request.data.get(
+        "reviewer_comments"
+    ),
+
+    reviewed_by=request.user,
+
+    reviewed_at=timezone.now()
+
+)
+
+     return Response(serializer.data)
+        
+        
+    
+
 
     # =====================================================
     # SOFT DELETE
@@ -745,6 +861,8 @@ class TestRunViewSet(ModelViewSet):
             },
             status=status.HTTP_204_NO_CONTENT
         )
+
+
 
 # ─────────────────────────────────────────────
 # BUG  —  Admin + Tester: CRUD  |  Reviewer: R + comment patch
@@ -848,10 +966,40 @@ def bulk_import_testcases(request):
 
 class TestRunVersionViewSet(ModelViewSet):
 
-    queryset = TestRunVersion.objects.filter(deleted_at__isnull=True)
+    serializer_class = TestRunVersionSerializer
+
     lookup_field = "uuid"
 
-    serializer_class = TestRunVersionSerializer
+    def get_queryset(self):
+
+        queryset = TestRunVersion.objects.filter(
+            deleted_at__isnull=True
+        )
+
+        screen_id = self.request.query_params.get(
+            "screen_id"
+        )
+
+       
+
+        # FILTER PROJECT
+
+       
+
+        # FILTER SCREEN
+
+        if screen_id:
+
+            queryset = queryset.filter(
+                screen__uuid=screen_id
+            )
+
+        return queryset.order_by(
+            "-created_at"
+        )
+    
+
+    
 
     @action(
         detail=False,
@@ -881,6 +1029,23 @@ class TestRunVersionViewSet(ModelViewSet):
         )
 
         return Response(serializer.data)
+    
+    def destroy(self, request, *args, **kwargs):
+
+     version = self.get_object()
+
+     version.deleted_by = request.user
+
+     version.deleted_at = timezone.now()
+
+     version.save()
+
+     return Response(
+        {
+            "message": "Version deleted successfully"
+        },
+        status=status.HTTP_204_NO_CONTENT
+    )
 
     def create(self, request, *args, **kwargs):
 
@@ -895,4 +1060,101 @@ class TestRunVersionViewSet(ModelViewSet):
             serializer.data,
             status=status.HTTP_201_CREATED
         )
+        
+        
+class TestSessionViewSet(ModelViewSet):
 
+    serializer_class = TestSessionSerializer
+
+    lookup_field = "uuid"
+
+    def get_queryset(self):
+
+        queryset = TestSession.objects.filter(
+            deleted_at__isnull=True
+        )
+
+        version_id = self.request.query_params.get(
+            "version"
+        )
+
+        testing_type = self.request.query_params.get(
+            "testing_type"
+        )
+
+        if version_id:
+
+            queryset = queryset.filter(
+                version__uuid=version_id
+            )
+
+        if testing_type:
+
+            queryset = queryset.filter(
+                testing_type=testing_type
+            )
+
+        return queryset.order_by(
+            "-created_at"
+        )
+
+    def create(
+        self,
+        request,
+        *args,
+        **kwargs
+    ):
+
+        serializer = self.get_serializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        session = serializer.save(
+            created_by=request.user,
+            updated_by=request.user
+        )
+
+        print(
+            "SESSION CREATED:",
+            session.session_name,
+            session.testing_type
+        )
+
+        TestSessionService.create_session(
+            session=session,
+            user=request.user
+        )
+
+        return Response(
+            self.get_serializer(
+                session
+            ).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    def destroy(
+        self,
+        request,
+        *args,
+        **kwargs
+    ):
+
+        session = self.get_object()
+
+        session.deleted_by = request.user
+
+        session.deleted_at = timezone.now()
+
+        session.save()
+
+        return Response(
+            {
+                "message":
+                "Session deleted successfully"
+            },
+            status=status.HTTP_204_NO_CONTENT
+        )

@@ -3,6 +3,8 @@ from .models import Project, Module, Screen
 from .models import TestCase
 from .models import Bug
 from .models import TestRun, TestRunVersion
+from .models import TestSession
+    
 
 
 
@@ -233,8 +235,18 @@ class TestRunSerializer(serializers.ModelSerializer):
             "run_status",
             "actual_result",
             "notes",
+            
+            "notes",
+
+# REVIEWER
+
+            "reviewer_comments",
+            "reviewed_by",
+            "reviewed_at",
 
             "executed_by",
+
+            
             "executed_by_name",
 
             "started_at",
@@ -260,6 +272,9 @@ class TestRunSerializer(serializers.ModelSerializer):
             "updated_by",
 
             "executed_by",
+            
+            "reviewed_by",
+            "reviewed_at",
 
             "started_at",
             "completed_at",
@@ -338,3 +353,22 @@ class BulkTestCaseSerializer(serializers.Serializer):
     priority = serializers.CharField()
     status = serializers.CharField()
     screen = serializers.CharField()
+    
+    
+class TestSessionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = TestSession
+
+        fields = "__all__"
+
+        read_only_fields = (
+            "uuid",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "created_by",
+            "updated_by",
+            "deleted_by",
+        )
